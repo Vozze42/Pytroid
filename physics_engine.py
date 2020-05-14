@@ -58,3 +58,5 @@ class Physics_Object:
         self.vel += self.accel * dt
         self.pos += self.vel * dt
         self.accel = Vector2()
+        self.ang_vel += self.ang_accel * dt
+        self.ang += self.ang_vel * dt

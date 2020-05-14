@@ -8,8 +8,8 @@ class SpaceShip(physics.Physics_Object):
 
 class Asteroid(physics.Physics_Object):
         def __init__(self, mass, radius, pos, vel, accel, ang_pos, ang_vel, ang_accel, points):
-                physics.Physics_Object.__init__(self, mass, radius, pos, vel, accel, ang_pos, ang_vel, ang_accel)
-                self.energy =  #assuming average mass = 200 kg
+                physics.Physics_Object.__init__(self, mass, radius, pos, vel, accel, ang_pos, ang_vel, ang_accel, energy)
+                self.energy = energy '''assuming average mass 200 kg'''
                 self.points = points #points player gets when asteroid gets destoryed
 
 
@@ -17,7 +17,7 @@ class Ray():
         def __init__(self, direction, pos): #pos is equal to the center position of the spacecraft
                 self.pos  = pos #[x, y]
                 self.vel = math.cosvel #[vx, vy]
-                impulse = 10 #enough to slow avg astronaut down by ...
+                impulse = 10 #slows down asteroid when hit
                 energy = 100 #damage done
 
 pygame.init()
