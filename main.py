@@ -1,15 +1,16 @@
 import pygame 
-import physics
+import physics_engine
+from physics_engine import Physics_Object
 
-class SpaceShip(physics.Physics_Object):
-        def __init__(self, mass, radius, pos, vel, accel, ang_pos, ang_vel, ang_accel):
-                physics.Physics_Object.__init__(self, mass, radius, pos, vel, accel, ang_pos, ang_vel, ang_accel)
+class SpaceShip():
+        def __init__(self, mass = 1, radius = 1, hp = 1, Physics_Object = Physics_Object()):
+                self.physics_object = Physics_Object.__init__(self)
 
 
-class Asteroid(physics.Physics_Object):
-        def __init__(self, mass, radius, pos, vel, accel, ang_pos, ang_vel, ang_accel, points):
-                physics.Physics_Object.__init__(self, mass, radius, pos, vel, accel, ang_pos, ang_vel, ang_accel)
-                self.energy =  #assuming average mass = 200 kg
+class Asteroid():
+        def __init__(self, mass = 1, radius = 1, hp = 1, physics_object = Physics_Object()):
+                self.physics_object = Physics_Object.__init__(self)
+                self.energy = 1 #assuming average mass = 200 kg
                 self.points = points #points player gets when asteroid gets destoryed
 
 
