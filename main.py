@@ -1,6 +1,6 @@
 import pygame 
 import physics_engine as pe
-from physics_engine import Physics_Object
+from physics_engine import Physics_Object, Vector2
 import random as rd
 import math
 
@@ -23,23 +23,23 @@ class Ray():
 def asteroidGenerator(asteroids): #set constant initially, increase if wave functionality added
         mass = rd.randint(60, 100) #avg mass of 80 kg assumed
         radius = mass/4 #with average mass 80, radius average asteroid 20 pixels
-        vel = 400/mass#standard total momentum of .... , velocity in pixel/dt
+        vel = 400/mass #standard total momentum of .... , velocity in pixel/dt
         angle = rd.randint(-40, 40) #angle between x and y component velocity
         ang_vel = 0
         ang_pos = 0
         if asteroids%4 == 0:
-                pos = [rd.randint(0,400), 0] #left handed coordinate system, [x,y], top_screen border
-                vel = [vel*math.sin(angle), vel*math.cos(angle)] #downward, positive y
+                pos = Vector2(rd.randint(0,400), 0) #left handed coordinate system, [x,y], top_screen border
+                vel = Vector2(vel*math.sin(angle), vel*math.cos(angle)) #downward, positive y
         elif asteroids%4 == 1:
-                pos = [400, rd.randint(0,300)] #right screen border
-                [-vel*math.cos(angle), vel*math.sin(angle)]
+                pos = Vector2(rd.randint(0,400), 300) #bottom screen border
+                vel = Vector2(vel*math.sin(angle), -vel*math.cos(angle)]
         elif asteroids%4 == 2:
-                pos = [rd.randint(0,400), 300] #bottom screen border
-                vel = [vel*math.sin(angle), -vel*math.cos(angle)]
+                pos = Vector2(400, rd.randint(0,300)) #right screen border
+                vel = Vector2(-vel*math.cos(angle), vel*math.sin(angle))
         elif asteroids%4 == 3:
-                pos = [0, rd.randint(0,300)] #left screen border
-                vel = [vel*math.cos(angle), vel*math.sin(angle)]
-        return Asteroid(mass, radius, pos, vel, 0, 0, 0, 0) #add properties to asteroid asteroid pe.drawCircle(radius)
+                pos = Vector2(0, rd.randint(0,300)) #left screen border
+                vel = Vector2(vel*math.cos(angle), vel*math.sin(angle))
+        return Asteroid(mass = mass, radius = radius, pos = pos, vel = vel) #add properties to asteroid asteroid pe.drawCircle(radius)
 
 pygame.init()
 widthscreen = 400
@@ -52,13 +52,12 @@ y = 30
 clock = pygame.time.Clock()
 
 #initial state vars
-running = True #use this method??
+running = True
 keys = pg.key.get_pressed()
 level_one = 10 #ten asteroids in level one
 
 while running:
-        player = SpaceShip(10,1,[0,0],[0,0],[0,0],0,0,0) #spawn at center of screen?
-        player = SpaceShip(Physics_Object(moi = 1, pos = Vector2(0,0)), radius = 10)
+        player = SpaceShip(Physics_Object(pos = Vector2(200,150)), radius = 10)
         
         for level in range(0,1): #just 1 level for now
                 #now done simultaneously, should be in time steps!!!
