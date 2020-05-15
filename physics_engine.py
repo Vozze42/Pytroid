@@ -18,18 +18,12 @@ class Vector2:
         y = self.y - other.y
         return Vector2(x,y)
 
-    def __rsub__(self, other):   # not commutative operation
-        other = Vector2(other)
-        return other - self
-
     def __mul__(self, other):
         x = self.x * other
         y = self.y * other
         return Vector2(x,y) 
 
-    __rmul__ = __mul__   # commutative operation
-
-    def __truediv__(self, other):
+    def __div__(self, other):
         x = self.x / other
         y = self.y / other
         return Vector2(x,y) 
@@ -38,24 +32,6 @@ class Vector2:
         x = self.x + other.x
         y = self.y + other.y
         return Vector2(x,y) 
-
-    def __pow__(self, other):
-        x = self.x ** other
-        y = self.y ** other
-        return Vector2(x,y)
-
-    def mag(self):
-        mag = math.sqrt(self.x**2 + self.y**2)
-        return mag
-
-    def dot(self,other):
-        x = self.x * other.x
-        y = self.y * other.y
-        return Vector2(x,y)
-
-    def get_angle(self):
-        angle = math.tan(self.y/self.x)
-        return angle
 
 class Physics_Object:
     physics_objects = []
@@ -74,13 +50,18 @@ class Physics_Object:
         self.physics_objects.append(self)
 
     def add_force(self, force):
-       self.forces.append(force)
+        self.forces.append(force)
 
     def physics_update(self, dt):
         for force in self.forces:
-            self.accel += force /self.mass
+            self.accel += force / self.mass
         self.vel += self.accel * dt
         self.pos += self.vel * dt
         self.accel = Vector2()
         self.ang_vel += self.ang_accel * dt
         self.ang += self.ang_vel * dt
+
+#other functions
+def drawCircle(radius): #update for dt???
+    pos=getPos()
+    pygame.draw.circle(screen, BLUE, pos, radius)
