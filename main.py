@@ -1,22 +1,23 @@
 import pygame 
 import physics_engine as pe
+from physics_engine import Physics_Object
 import random as rd
 import math
 
-class SpaceShip(physics.Physics_Object):
-        def __init__(self, mass, radius, pos, vel, accel, ang_pos, ang_vel, ang_accel):
-                physics.Physics_Object.__init__(self, mass, radius, pos, vel, accel, ang_pos, ang_vel, ang_accel)
+class SpaceShip():
+        def __init__(self, radius = 1, physics_object = Physics_Object()):
+                self.physics_object = Physics_Object
 
 
-class Asteroid(physics.Physics_Object):
-        def __init__(self, mass, radius, pos, vel, accel, ang_pos, ang_vel, ang_accel, points):
-                physics.Physics_Object.__init__(self, mass, radius, pos, vel, accel, ang_pos, ang_vel, ang_accel, energy)
+class Asteroid():
+        def __init__(self, radius, physics_object = Physics_Object()):
+                self.physics_object = Physics_Object
 
 
 class Ray():
         def __init__(self, direction, pos): #pos is equal to the center position of the spacecraft
                 self.pos  = pos #[x, y]
-                self.vel = math.cosvel #[vx, vy]
+                self.vel =  #[vx, vy]
                 energy = 100 #damage done
 
 def asteroidGenerator(asteroids): #set constant initially, increase if wave functionality added
@@ -57,6 +58,7 @@ level_one = 10 #ten asteroids in level one
 
 while running:
         player = SpaceShip(10,1,[0,0],[0,0],[0,0],0,0,0) #spawn at center of screen?
+        player = SpaceShip(Physics_Object(moi = 1, pos = Vector2(0,0)), radius = 10)
         
         for level in range(0,1): #just 1 level for now
                 #now done simultaneously, should be in time steps!!!
@@ -68,8 +70,6 @@ while running:
         if keys[pe.K_ESCAPE]:
                 running = False
 
-
-while not done:
         for event in pygame.event.get():
                 pass
 
@@ -81,4 +81,6 @@ while not done:
 
         pygame.display.flip()
         clock.tick(60)
+
+        
 

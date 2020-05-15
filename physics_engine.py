@@ -1,4 +1,5 @@
 import math
+import pygame as pe
 
 class Vector2:
     def __init__(self, x = 0, y = 0):
@@ -18,12 +19,18 @@ class Vector2:
         y = self.y - other.y
         return Vector2(x,y)
 
+    def __rsub__(self, other):   # not commutative operation
+        other = Vector2(other)
+        return other - self
+
     def __mul__(self, other):
         x = self.x * other
         y = self.y * other
         return Vector2(x,y) 
 
-    def __div__(self, other):
+    __rmul__ = __mul__   # commutative operation
+
+    def __truediv__(self, other):
         x = self.x / other
         y = self.y / other
         return Vector2(x,y) 
@@ -33,6 +40,24 @@ class Vector2:
         y = self.y + other.y
         return Vector2(x,y) 
 
+    def __pow__(self, other):
+        x = self.x ** other
+        y = self.y ** other
+        return Vector2(x,y)
+
+    def mag(self):
+        mag = math.sqrt(self.x**2 + self.y**2)
+        return mag
+
+    def dot(self,other):
+        x = self.x * other.x
+        y = self.y * other.y
+        return Vector2(x,y)
+
+    def get_angle(self):
+        angle = math.atan(self.y/self.x)
+        return angle
+        
 class Physics_Object:
     physics_objects = []
 
@@ -63,5 +88,5 @@ class Physics_Object:
 
 #other functions
 def drawCircle(radius): #update for dt???
-    pos=getPos()
-    pygame.draw.circle(screen, BLUE, pos, radius)
+    pos=pe.getPos()
+    pe.draw.circle(screen, BLUE, pos, radius)
