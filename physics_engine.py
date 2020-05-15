@@ -1,5 +1,5 @@
 import math
-import pygame as pe
+import pygame
 
 class Vector2:
     def __init__(self, x = 0, y = 0):
@@ -57,11 +57,14 @@ class Vector2:
     def get_angle(self):
         angle = math.atan(self.y/self.x)
         return angle
-        
+
+    def unpack(self):
+        return [self.x, self.y]
+
 class Physics_Object:
     physics_objects = []
 
-    def __init__(self, mass = 1, pos = Vector2(0,0), vel = Vector2(0,0), accel = Vector2(0,0), moi = 1, ang = 0, ang_vel = 0, ang_accel = 0):
+    def __init__(self, mass = 1, pos = Vector2(0,0), vel = Vector2(0,0), accel = Vector2(0,0), moi = 1, ang = 0, ang_vel = 0, ang_accel = 0, momentum = 0, parent = None):
         self.mass = mass
         self.moi = moi
         self.pos = pos
@@ -70,6 +73,7 @@ class Physics_Object:
         self.ang = ang
         self.ang_vel = ang_vel
         self.ang_accel = ang_accel
+        self.parent = parent
 
         self.forces = []
         self.physics_objects.append(self)
@@ -86,7 +90,17 @@ class Physics_Object:
         self.ang_vel += self.ang_accel * dt
         self.ang += self.ang_vel * dt
 
-#other functions
-def drawCircle(radius): #update for dt???
-    pos=pe.getPos()
-    pe.draw.circle(screen, BLUE, pos, radius)
+class Rigid_Body():
+    rigid_bodies = []
+
+    def __init__(self, radius = 1, color = (255,255,255), parent = None):
+        self.radius = radius
+        self.color = color
+        self.parent = parent
+        self.rigid_bodies.append(self)
+
+    def draw_body(self, screen):
+        if self.parent != None:
+            coord = self.parent.physics_object.pos.unpack()
+            coord = [int(coord[0]), int(coord[1])]
+            pygame.draw.circle(screen, self.color, coord, int(self.radius))
