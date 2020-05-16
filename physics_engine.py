@@ -90,6 +90,10 @@ class Physics_Object:
         self.accel = Vector2()
         self.ang_vel += self.ang_accel * dt
         self.ang += self.ang_vel * dt
+        if self.ang > 180:
+            self.ang -= 360 #set angular position with switch point 
+        if self.ang < -180:
+            self.ang += 360
 
 class Rigid_Body():
     rigid_bodies = []

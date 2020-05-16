@@ -4,6 +4,9 @@ from physics_engine import Physics_Object, Rigid_Body, Vector2
 import random as rd
 import math
 
+widthscreen = 1920
+heightscreen = 1080
+
 class SpaceShip():
         def __init__(self, physics_object = Physics_Object(), rigid_body = Rigid_Body()):
                 self.physics_object = physics_object
@@ -12,7 +15,14 @@ class SpaceShip():
                 self.rigid_body = rigid_body
                 self.rigid_body.parent = self
                 
-
+        def inBounds(physics_object = Physics_Object()):
+                coord = self.parent.physics_object.pos.unpack()
+                velocity = self.parent.physics_object.vel.unpack()
+                if widthscreen-30 < coord[0] < widthscreen or 0 < coord[0] < 30: #making sure spaceship cant go out of bounds
+                        Vector2.__mul__(velocity, Vector2(-1, 0)) #"bounce" of sides
+                if heightscreen-30 < coord[1] < heightscreen or 0 < coord[1] < 30: 
+                        Vector2.__mul__(velocity, Vector2(0, -1))
+        
 
 class Asteroid():
         def __init__(self, physics_object = Physics_Object(), rigid_body = Rigid_Body()):
@@ -69,8 +79,6 @@ def generateBullet(pos_player, angle):
         
 
 pg.init()
-widthscreen = 1920
-heightscreen = 1080
 screen = pg.display.set_mode((widthscreen, heightscreen))
 done = False
 is_blue = True
@@ -100,6 +108,8 @@ while running:
         else:
                 time_asteroid += dt # dt is measured in milliseconds, therefore 250 ms = 0.25 seconds
         
+        player_angle = player.physics_object.ang
+        vel_add = 1 #instantaneous velocity added
         #shoot stuff
         if keys[pg.K_SPACE]:
                 generateBullet(player.physics_object.pos, player.physics_object.ang)
@@ -108,14 +118,19 @@ while running:
                 player.physics_object.ang += 10
         if keys[pg.K_e]: #pushing e rotates -10 deg, 0 deg aligned with x-axis
                 player.physics_object.ang -= 10
-        #if keys[pg.K_w]: go forward
-                
-        #if keys[pg.K_s]: go backward
-        #if keys[pg.K_a]: go left
-        #if keys[pg.K_d]: go right
+        if keys[pg.K_w]: #go forward
+                player.physics_object.vel = Vector2.__add__(player.physics_object.vel, Vector2(math.cos(player_angle), math.sin(player_angle))
+        if keys[pg.K_s]: #go backward
+                player.physics_object.vel = Vector2.__add__(player.physics_object.vel, Vector2(-math.cos(player_angle), math.sin(player_angle))
+        if keys[pg.K_a]: #go left
+                player.physics_object.vel = Vector2.__add__(player.physics_object.vel, Vector2(math.sin(player_angle), math.cos()))
+        if keys[pg.K_d]: #go right
+                player.physics_object.vel = Vector2.__add__(player.physics_object.vel, Vector2)
         #close the game
         if keys[pg.K_ESCAPE]:
                 running = False
+
+        if player
 
         for event in pg.event.get():
                 pass
