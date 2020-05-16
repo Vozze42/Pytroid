@@ -125,13 +125,13 @@ while running:
         if keys[pg.K_f]: #ossibility to set velocity to zero, remove if fly_by_wire!!!
                 player.physics_object.vel = Vector2(0,0)
         if keys[pg.K_w]: #go forward
-                player.physics_object.vel = Vector2.__add__(player.physics_object.vel, Vector2(vel_add*math.cos(player_angle), vel_add*math.sin(player_angle))
+                player.physics_object.vel = Vector2.__add__(player.physics_object.vel, Vector2(vel_add*math.cos(player_angle), vel_add*math.sin(player_angle)))
         if keys[pg.K_s]: #go backward
-                player.physics_object.vel = Vector2.__add__(player.physics_object.vel, Vector2(vel_add*-math.cos(player_angle), vel_add*math.sin(player_angle))
+                player.physics_object.vel = Vector2.__add__(player.physics_object.vel, Vector2(vel_add*-math.cos(player_angle), vel_add*math.sin(player_angle)))
         if keys[pg.K_a]: #go left
                 player.physics_object.vel = Vector2.__add__(player.physics_object.vel, Vector2(vel_add*math.sin(player_angle), -vel_add*math.cos(player_angle)))
         if keys[pg.K_d]: #go right
-                player.physics_object.vel = Vector2.__add__(player.physics_object.vel, Vector2(vel_add*math.sin(player_angle), vel_add*math.cos(player_angle))
+                player.physics_object.vel = Vector2.__add__(player.physics_object.vel, Vector2(vel_add*math.sin(player_angle), vel_add*math.cos(player_angle)))
         #close the game
         if keys[pg.K_ESCAPE]:
                 running = False

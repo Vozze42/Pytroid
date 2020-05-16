@@ -58,6 +58,10 @@ class Vector2:
         angle = math.atan(self.y/self.x)
         return angle
 
+    def distance(self, other):
+        d = math.sqrt(self.x**2+self.y**2)
+        return d
+        
     def unpack(self):
         return [self.x, self.y]
 
