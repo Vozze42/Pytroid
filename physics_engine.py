@@ -73,6 +73,7 @@ class Physics_Object:
         self.ang = ang
         self.ang_vel = ang_vel
         self.ang_accel = ang_accel
+        self.momentum = momentum
         self.parent = parent
 
         self.forces = []
@@ -103,4 +104,5 @@ class Rigid_Body():
         if self.parent != None:
             coord = self.parent.physics_object.pos.unpack()
             coord = [int(coord[0]), int(coord[1])]
-            pygame.draw.circle(screen, self.color, coord, int(self.radius))
+            while 0 <= coord[0] <= 400 and 0 <= coord[1] <= 300: #is this correct??
+                pygame.draw.circle(screen, self.color, coord, int(self.radius))

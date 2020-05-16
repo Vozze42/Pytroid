@@ -24,43 +24,48 @@ class Asteroid():
                 
 
 class Bullet():
-        def __init__(self, width =2, height=10, physics_object = Physics_Object()):
+        def __init__(self, width =2, height=10, physics_object = Physics_Object(), rigid_body = Rigid_Body(color=(255,0,0))):
                 self.physics_object = physics_object
                 self.width = width
                 self.height = height
 
-def asteroidGenerator(number_ast): #set constant initially, increase if wave functionality added
+                self.rigid_body = rigid_body
+                self.rigid_body.parent = self
+
+def asteroidGenerator(number_ast, asteroid_frequency, time_asteroid): #set constant initially, increase if wave functionality added
         asteroid_list = []
         for iteration in range(number_ast):
-                momentum = 400
-                mass = rd.randint(60, 100) #avg mass of 80 kg assumed
-                radius = int(mass/4) #with average mass 80, radius average asteroid 20 pixels
-                vel = 40/mass #standard total momentum of 400 , avg 50 velocity in pixel/second,
-                angle = rd.randint(-40, 40) #angle between x and y component velocity
-                ang_vel = 0
-                ang_pos = 0
-                if iteration%4 == 0:
-                        pos = Vector2(rd.randint(0,widthscreen), 0) #left handed coordinate system, [x,y], top_screen border
-                        vel = Vector2(vel*math.sin(angle), vel*math.cos(angle)) #downward, positive y
-                elif iteration%4 == 1:
-                        pos = Vector2(rd.randint(0,widthscreen), heightscreen) #bottom screen border
-                        vel = Vector2(vel*math.sin(angle), -vel*math.cos(angle))
-                elif iteration%4 == 2:
-                        pos = Vector2(widthscreen, rd.randint(0,heightscreen)) #right screen border
-                        vel = Vector2(-vel*math.cos(angle), vel*math.sin(angle))
-                elif iteration%4 == 3:
-                        pos = Vector2(0, rd.randint(0,heightscreen)) #left screen border
-                        vel = Vector2(vel*math.cos(angle), vel*math.sin(angle))
+                if time_asteroid > asteroid_frequency: #intended purpose to create an asteroid at time increments of asteroid_frequency
+                        momentum = 400
+                        mass = rd.randint(60, 100) #avg mass of 80 kg assumed
+                        radius = int(mass/4) #with average mass 80, radius average asteroid 20 pixels
+                        vel = 40/mass #standard total momentum of 400 , avg 50 velocity in pixel/second,
+                        angle = rd.randint(-40, 40) #angle between x and y component velocity
+                        ang_vel = 0
+                        ang_pos = 0
+                        if iteration%4 == 0:
+                                pos = Vector2(rd.randint(0,widthscreen), 0) #left handed coordinate system, [x,y], top_screen border
+                                vel = Vector2(vel*math.sin(angle), vel*math.cos(angle)) #downward, positive y
+                        elif iteration%4 == 1:
+                                pos = Vector2(rd.randint(0,widthscreen), heightscreen) #bottom screen border
+                                vel = Vector2(vel*math.sin(angle), -vel*math.cos(angle))
+                        elif iteration%4 == 2:
+                                pos = Vector2(widthscreen, rd.randint(0,heightscreen)) #right screen border
+                                vel = Vector2(-vel*math.cos(angle), vel*math.sin(angle))
+                        elif iteration%4 == 3:
+                                pos = Vector2(0, rd.randint(0,heightscreen)) #left screen border
+                                vel = Vector2(vel*math.cos(angle), vel*math.sin(angle))
                 asteroid_list.append(Asteroid(physics_object = Physics_Object(mass = mass, pos = pos, vel = vel, momentum=50), rigid_body = Rigid_Body(radius=radius)))
                 
         return asteroid_list
 
 def generateBullet(pos_player, angle):
+        radius = 2
         momentum = 200
         mass = 2
         vel = 100 #momentum divided by mass, momentum bullet 50
         velocity = Vector2(vel*math.cos(angle), vel*math.sin(angle))
-        return Bullet(physics_object=Physics_Object(mass=mass, vel=velocity, momentum=momentum))
+        return Bullet(physics_object=Physics_Object(mass=mass, vel=velocity, momentum=momentum), rigid_body = Rigid_Body(radius=radius))
         
 
 pg.init()
@@ -78,37 +83,36 @@ fps = 60
 running = True
 keys = pg.key.get_pressed()
 level_one = 10 #ten asteroids in level one
-time_per_level = 10
+time_per_level = 600 #dt = 1/60 --> t = 10
 asteroids = []
 time_asteroid = 0
-asteroid_frequency = 100
 
 while running:
         dt = clock.tick(fps)
         screen.fill((0, 0, 0))
         
-        player = SpaceShip(physics_object = Physics_Object(pos = Vector2(200,150)), rigid_body = Rigid_Body(radius = 10))
+        player = SpaceShip(physics_object = Physics_Object(pos = Vector2(200,150)), rigid_body = Rigid_Body(radius = 10, color= (0,255,0)))
 
-        time_asteroid += dt # dt is measured in milliseconds, therefore 250 ms = 0.25 seconds
+        asteroid_frequency = time_per_level/level_one #how often to generate an asteroid
         if time_asteroid > asteroid_frequency:
-                asteroids = asteroidGenerator(level_one)
-                for asteroid in asteroids:
-                        BLUE = (0,0,255)
-                        
+                asteroids = asteroidGenerator(level_one, asteroid_frequency, time_asteroid)  
                 time_asteroid = 0 #reset it to 0 so you can count again
+        else:
+                time_asteroid += dt # dt is measured in milliseconds, therefore 250 ms = 0.25 seconds
+        
         #shoot stuff
         if keys[pg.K_SPACE]:
                 generateBullet(player.physics_object.pos, player.physics_object.ang)
-
         #control the spacecraft
         if keys[pg.K_q]: #pushing q rotates 10 deg positive
                 player.physics_object.ang += 10
         if keys[pg.K_e]: #pushing e rotates -10 deg, 0 deg aligned with x-axis
                 player.physics_object.ang -= 10
-        #if keys[pg.K_w]: go up
-        #if keys[pg.K_s]: go up
-        #if keys[pg.K_w]: go up
-        #if keys[pg.K_w]: go up
+        #if keys[pg.K_w]: go forward
+                
+        #if keys[pg.K_s]: go backward
+        #if keys[pg.K_a]: go left
+        #if keys[pg.K_d]: go right
         #close the game
         if keys[pg.K_ESCAPE]:
                 running = False
