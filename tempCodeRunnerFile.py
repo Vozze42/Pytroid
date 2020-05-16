@@ -1,1 +1,1 @@
-0
+screen = pg.display.set_mode((widthscreen, heightscreen))
