@@ -44,7 +44,8 @@ class Bullet():
 
 def asteroidGenerator(number_ast, asteroid_frequency, time_asteroid): #set constant initially, increase if wave functionality added
         asteroid_list = []
-        for iteration in range(number_ast):
+        i = 0
+        while i < number_ast:
                 if time_asteroid > asteroid_frequency: #intended purpose to create an asteroid at time increments of asteroid_frequency
                         momentum = 400
                         mass = rd.randint(60, 100) #avg mass of 80 kg assumed
@@ -65,6 +66,7 @@ def asteroidGenerator(number_ast, asteroid_frequency, time_asteroid): #set const
                         elif iteration%4 == 3:
                                 pos = Vector2(0, rd.randint(0,heightscreen)) #left screen border
                                 vel = Vector2(vel*math.cos(angle), vel*math.sin(angle))
+                i += 1
                 asteroid_list.append(Asteroid(physics_object = Physics_Object(mass = mass, pos = pos, vel = vel, momentum=50), rigid_body = Rigid_Body(radius=radius)))
                 
         return asteroid_list
@@ -115,22 +117,24 @@ while running:
                 generateBullet(player.physics_object.pos, player.physics_object.ang)
         #control the spacecraft
         if keys[pg.K_q]: #pushing q rotates 10 deg positive
-                player.physics_object.ang += 10
+                player.physics_object.ang_vel += 10
         if keys[pg.K_e]: #pushing e rotates -10 deg, 0 deg aligned with x-axis
-                player.physics_object.ang -= 10
+                player.physics_object.ang_vel -= 10
+        if keys[pg.K_r]: #possibility to set ang_vel to zero, remove if fly_by_wire!!!
+                playe.physics_objects.ang_vel = 0
+        if keys[pg.K_f]: #ossibility to set velocity to zero, remove if fly_by_wire!!!
+                player.physics_object.vel = Vector2(0,0)
         if keys[pg.K_w]: #go forward
-                player.physics_object.vel = Vector2.__add__(player.physics_object.vel, Vector2(math.cos(player_angle), math.sin(player_angle))
+                player.physics_object.vel = Vector2.__add__(player.physics_object.vel, Vector2(vel_add*math.cos(player_angle), vel_add*math.sin(player_angle))
         if keys[pg.K_s]: #go backward
-                player.physics_object.vel = Vector2.__add__(player.physics_object.vel, Vector2(-math.cos(player_angle), math.sin(player_angle))
+                player.physics_object.vel = Vector2.__add__(player.physics_object.vel, Vector2(vel_add*-math.cos(player_angle), vel_add*math.sin(player_angle))
         if keys[pg.K_a]: #go left
-                player.physics_object.vel = Vector2.__add__(player.physics_object.vel, Vector2(math.sin(player_angle), math.cos()))
+                player.physics_object.vel = Vector2.__add__(player.physics_object.vel, Vector2(vel_add*math.sin(player_angle), -vel_add*math.cos(player_angle)))
         if keys[pg.K_d]: #go right
-                player.physics_object.vel = Vector2.__add__(player.physics_object.vel, Vector2)
+                player.physics_object.vel = Vector2.__add__(player.physics_object.vel, Vector2(vel_add*math.sin(player_angle), vel_add*math.cos(player_angle))
         #close the game
         if keys[pg.K_ESCAPE]:
                 running = False
-
-        if player
 
         for event in pg.event.get():
                 pass
