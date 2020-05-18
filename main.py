@@ -31,6 +31,10 @@ class Asteroid():
 
                 self.rigid_body = rigid_body
                 self.rigid_body.parent = self
+
+        #def removeAsteroid(self, coord):
+        #        if 0 > coord[0] > widthscreen or 0 > coord[1] > heightscreen:
+
                 
 
 class Bullet():
@@ -54,16 +58,16 @@ def asteroidGenerator(number_ast, asteroid_frequency, time_asteroid): #set const
                         angle = rd.randint(-40, 40) #angle between x and y component velocity
                         ang_vel = 0
                         ang_pos = 0
-                        if iteration%4 == 0:
+                        if i%4 == 0:
                                 pos = Vector2(rd.randint(0,widthscreen), 0) #left handed coordinate system, [x,y], top_screen border
                                 vel = Vector2(vel*math.sin(angle), vel*math.cos(angle)) #downward, positive y
-                        elif iteration%4 == 1:
+                        elif i%4 == 1:
                                 pos = Vector2(rd.randint(0,widthscreen), heightscreen) #bottom screen border
                                 vel = Vector2(vel*math.sin(angle), -vel*math.cos(angle))
-                        elif iteration%4 == 2:
+                        elif i%4 == 2:
                                 pos = Vector2(widthscreen, rd.randint(0,heightscreen)) #right screen border
                                 vel = Vector2(-vel*math.cos(angle), vel*math.sin(angle))
-                        elif iteration%4 == 3:
+                        elif i%4 == 3:
                                 pos = Vector2(0, rd.randint(0,heightscreen)) #left screen border
                                 vel = Vector2(vel*math.cos(angle), vel*math.sin(angle))
                 i += 1
@@ -95,24 +99,32 @@ keys = pg.key.get_pressed()
 level_one = 10 #ten asteroids in level one
 time_per_level = 600 #dt = 1/60 --> t = 10
 asteroids = []
-time_asteroid = 0
+time_asteroid = 100
+max_astroids = 50
+number_of_astroids = 0
 
 physics_manager = Physics_Manager(screen)
+player = SpaceShip(physics_object = Physics_Object(pos = Vector2(200,150)), rigid_body = Rigid_Body(radius = 10, color= (0,255,0)))
 
 while running:
         dt = clock.tick(fps)
         screen.fill((0, 0, 0))
-        
-        player = SpaceShip(physics_object = Physics_Object(pos = Vector2(200,150)), rigid_body = Rigid_Body(radius = 10, color= (0,255,0)))
 
         asteroid_frequency = time_per_level/level_one #how often to generate an asteroid
-        if time_asteroid > asteroid_frequency:
-                asteroids = asteroidGenerator(level_one, asteroid_frequency, time_asteroid)  
+        if time_asteroid > asteroid_frequency and max_astroids > number_of_astroids:
+                asteroids = asteroidGenerator(level_one, asteroid_frequency, time_asteroid)
+                number_of_astroids += len(asteroids)
                 time_asteroid = 0 #reset it to 0 so you can count again
         else:
                 time_asteroid += dt # dt is measured in milliseconds, therefore 250 ms = 0.25 seconds
         
+        for elements in asteroids:
+                coord = Vector2.unpack(elements.physics_object.pos)
+                if 0 > coord[0] > widthscreen or 0 > coord[1] > heightscreen:
+                        asteroids.remove(elements)
+
         player_angle = player.physics_object.ang
+
         vel_add = 1 #instantaneous velocity added
         #shoot stuff
         if keys[pg.K_SPACE]:

@@ -1,5 +1,6 @@
 import math
 import pygame
+import random
 
 class Vector2:
     def __init__(self, x = 0, y = 0):
@@ -52,7 +53,7 @@ class Vector2:
     def dot(self,other):
         x = self.x * other.x
         y = self.y * other.y
-        return Vector2(x,y)
+        return x+y
 
     def get_angle(self):
         angle = math.atan(self.y/self.x)
@@ -96,10 +97,11 @@ class Physics_Object:
 
 class Rigid_Body():
 
-    def __init__(self, radius = 1, color = (255,255,255), parent = None):
+    def __init__(self, radius = 1, color = (255,255,255), parent = None, e = 1):
         self.radius = radius
         self.color = color
         self.parent = parent
+        self.e = e
         Physics_Manager.rigid_bodies.append(self)
 
     def draw_body(self, screen):
@@ -127,17 +129,37 @@ class Rigid_Body():
         other_mass = other.parent.physics_object.mass
         own_pos = self.parent.physics_object.pos
         own_mass = self.parent.physics_object.mass
+        own_vel = self.parent.physics_object.vel
+        other_vel = other.parent.physics_object.vel
+        own_rad = self.radius
+        other_rad = other.radius
+        own_e = self.e
+        other_e = other.e
+
+        total_radius = own_rad + other_rad
 
         relative_position = other_pos - own_pos
+        relative_velocity = other_vel - own_vel
+
+        overlap = relative_position.mag() - total_radius
+
+        e = min(own_e, other_e)
+
         if relative_position.mag() != 0:
             normal = relative_position / relative_position.mag()
 
-            J =  normal.x*(normal.x * own_mass + normal.x * other_mass) + normal.y*(normal.y * own_mass + normal.y * other_mass) 
+            J = -(1+e)*relative_velocity.dot(normal)/((normal / own_mass + normal / other_mass).dot(normal))
 
-            self.parent.physics_object.vel += J*normal*own_mass
-            other.parent.physics_object.vel += -1*J*normal*other_mass
-            return
+            self.parent.physics_object.vel += -1*J*normal/own_mass
+            other.parent.physics_object.vel += 1*J*normal/other_mass
 
+            self.parent.physics_object.pos += normal * overlap/2
+            other.parent.physics_object.pos -= normal * overlap/2
+        else:
+            normal = Vector2(random.randint(0,100),random.randint(0,100))
+            normal = normal / normal.mag()
+
+            other.parent.physics_object.pos += (own_rad + other_rad) * normal
 
 class Physics_Manager():
     rigid_bodies = []
@@ -158,19 +180,23 @@ class Physics_Manager():
         #Nested if structure for performance
         for own_body in self.rigid_bodies:
             for other_body in self.rigid_bodies:
-                if own_body != other_body and own_body.parent != None and other_body.parent != None: #Bandage solution
+                if self.rigid_bodies.index(own_body) != self.rigid_bodies.index(other_body) and own_body.parent != None and other_body.parent != None: #Bandage solution
                     if own_body.collision_detection(other_body):
                         if [other_body, own_body] not in colliding_bodies_lst: #Use the fact that rigid_bodies is ordered to check if the pair is already accounted for
                             colliding_bodies_lst.append([own_body,other_body])
 
         for colliding_bodies in colliding_bodies_lst:
             colliding_bodies[0].collision_response(colliding_bodies[1])
+        print(colliding_bodies_lst)
 
         return
 
     def update_physics(self, dt):
+        total_momentum = 0
         for physics_object in self.physics_objects:
                 physics_object.physics_update(dt)
+                total_momentum += physics_object.vel.mag() * physics_object.mass
+        print(total_momentum)
         return
 
     def remove_strange_things(self):

@@ -100,14 +100,14 @@ time_asteroid = 0
 
 physics_manager = Physics_Manager(screen)
 
-test_astroid_1 = Asteroid(physics_object=Physics_Object(mass=1, pos=Vector2(50,500), vel=Vector2(0.1,0)), rigid_body=Rigid_Body(radius=10))
-test_astroid_2 = Asteroid(physics_object=Physics_Object(mass=10, pos=Vector2(700,500), vel=Vector2(-0.05,0)),rigid_body=Rigid_Body(radius=50))
+test_astroid_1 = Asteroid(physics_object=Physics_Object(mass=2.5, pos=Vector2(50,300), vel=Vector2(0.1,0.1)), rigid_body=Rigid_Body(radius=10, e = 1))
+test_astroid_2 = Asteroid(physics_object=Physics_Object(mass=5, pos=Vector2(100,500), vel=Vector2(-0.1,-0.4)),rigid_body=Rigid_Body(radius=50, e = 1))
 
 while running:
         dt = clock.tick(fps)
         screen.fill((0, 0, 0))
         
-        player = SpaceShip(physics_object = Physics_Object(pos = Vector2(200,150)), rigid_body = Rigid_Body(radius = 10, color= (0,255,0)))
+        #player = SpaceShip(physics_object = Physics_Object(pos = Vector2(200,150)), rigid_body = Rigid_Body(radius = 10, color= (0,255,0)))
 
         
         """
@@ -117,7 +117,7 @@ while running:
                 time_asteroid = 0 #reset it to 0 so you can count again
         else:
                 time_asteroid += dt # dt is measured in milliseconds, therefore 250 ms = 0.25 seconds
-        """
+
 
         player_angle = player.physics_object.ang
         vel_add = 1 #instantaneous velocity added
@@ -144,7 +144,7 @@ while running:
         #close the game
         if keys[pg.K_ESCAPE]:
                 running = False
-
+        """
         for event in pg.event.get():
                 pass
 
