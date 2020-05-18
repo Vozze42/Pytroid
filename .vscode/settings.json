@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "/Library/Frameworks/Python.framework/Versions/3.6/bin/python3",
+    "python.pythonPath": "C:\\Python38\\python.exe",
     "python.linting.pylintArgs": [
         "--unsafe-load-any-extension=y"
     ]

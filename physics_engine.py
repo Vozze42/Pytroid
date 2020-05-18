@@ -64,9 +64,9 @@ class Vector2:
         
     def unpack(self):
         return [self.x, self.y]
-
+        
 class Physics_Object:
-    physics_objects = []
+    
 
     def __init__(self, mass = 1, pos = Vector2(0,0), vel = Vector2(0,0), accel = Vector2(0,0), moi = 1, ang = 0, ang_vel = 0, ang_accel = 0, momentum = 0, parent = None):
         self.mass = mass
@@ -81,7 +81,7 @@ class Physics_Object:
         self.parent = parent
 
         self.forces = []
-        self.physics_objects.append(self)
+        Physics_Manager.physics_objects.append(self)
 
     def add_force(self, force):
         self.forces.append(force)
@@ -100,17 +100,63 @@ class Physics_Object:
             self.ang += 360
 
 class Rigid_Body():
-    rigid_bodies = []
 
     def __init__(self, radius = 1, color = (255,255,255), parent = None):
         self.radius = radius
         self.color = color
         self.parent = parent
-        self.rigid_bodies.append(self)
+        Physics_Manager.rigid_bodies.append(self)
 
     def draw_body(self, screen):
         if self.parent != None:
             coord = self.parent.physics_object.pos.unpack()
             coord = [int(coord[0]), int(coord[1])]
-            while 0 <= coord[0] <= 400 and 0 <= coord[1] <= 300: #is this correct??
-                pygame.draw.circle(screen, self.color, coord, int(self.radius))
+            pygame.draw.circle(screen, self.color, coord, int(self.radius))
+
+    def collision_detection(self, other):
+        other_pos = other.physics_object.pos
+        other_radius = other.Rigid_Body.radius
+        own_pos = self.parent.physics_object.pos
+
+        relative_position = own_pos - other_pos
+        dist_between_positions = relative_position.mag()
+
+        total_radius = self.radius + other_radius
+        if dist_between_positions <= total_radius:
+            return True
+        else:
+            return False
+
+class Physics_Manager():
+    rigid_bodies = []
+    physics_objects = []
+    screen = None
+
+    def __init__(self, screen):
+        self.screen = screen
+
+    def draw_bodies(self, dt):
+        for rigid_body in self.rigid_bodies:
+                rigid_body.draw_body(self.screen)
+        return
+
+    def update_collisions(self):
+        colliding_bodies = []
+
+        #Nested if structure for performance
+        for own_body in self.rigid_bodies:
+            for other_body in self.rigid_bodies:
+                if own_body != other_body:
+                    if own_body.collision_detection(other_body):
+                        if [other_body, own_body] not in colliding_bodies: #Use the fact that rigid_bodies is ordered to check if the pair is already accounted for
+                            colliding_bodies.append([own_body,other_body])
+
+    def update_physics(self, dt):
+        for physics_object in self.physics_objects:
+                physics_object.physics_update(dt)
+        return
+
+    def update_all(self, dt):
+        self.draw_bodies(dt)
+        self.update_physics(dt)
+        return

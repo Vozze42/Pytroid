@@ -89,6 +89,7 @@ y = 30
 clock = pg.time.Clock()
 fps = 60
 
+
 #initial state vars
 running = True
 keys = pg.key.get_pressed()
@@ -99,19 +100,25 @@ time_asteroid = 0
 
 physics_manager = Physics_Manager(screen)
 
+test_astroid_1 = Asteroid(physics_object=Physics_Object(mass=1, pos=Vector2(50,500), vel=Vector2(0.1,0)), rigid_body=Rigid_Body(radius=10))
+test_astroid_2 = Asteroid(physics_object=Physics_Object(mass=10, pos=Vector2(700,500), vel=Vector2(-0.05,0)),rigid_body=Rigid_Body(radius=50))
+
 while running:
         dt = clock.tick(fps)
         screen.fill((0, 0, 0))
         
         player = SpaceShip(physics_object = Physics_Object(pos = Vector2(200,150)), rigid_body = Rigid_Body(radius = 10, color= (0,255,0)))
 
+        
+        """
         asteroid_frequency = time_per_level/level_one #how often to generate an asteroid
         if time_asteroid > asteroid_frequency:
                 asteroids = asteroidGenerator(level_one, asteroid_frequency, time_asteroid)  
                 time_asteroid = 0 #reset it to 0 so you can count again
         else:
                 time_asteroid += dt # dt is measured in milliseconds, therefore 250 ms = 0.25 seconds
-        
+        """
+
         player_angle = player.physics_object.ang
         vel_add = 1 #instantaneous velocity added
         #shoot stuff
