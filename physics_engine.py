@@ -57,16 +57,11 @@ class Vector2:
     def get_angle(self):
         angle = math.atan(self.y/self.x)
         return angle
-
-    def distance(self, other):
-        d = math.sqrt(self.x**2+self.y**2)
-        return d
         
     def unpack(self):
         return [self.x, self.y]
         
 class Physics_Object:
-    
 
     def __init__(self, mass = 1, pos = Vector2(0,0), vel = Vector2(0,0), accel = Vector2(0,0), moi = 1, ang = 0, ang_vel = 0, ang_accel = 0, momentum = 0, parent = None):
         self.mass = mass
@@ -114,11 +109,11 @@ class Rigid_Body():
             pygame.draw.circle(screen, self.color, coord, int(self.radius))
 
     def collision_detection(self, other):
-        other_pos = other.physics_object.pos
-        other_radius = other.Rigid_Body.radius
+        other_pos = other.parent.physics_object.pos
+        other_radius = other.radius
         own_pos = self.parent.physics_object.pos
 
-        relative_position = own_pos - other_pos
+        relative_position = other_pos - own_pos
         dist_between_positions = relative_position.mag()
 
         total_radius = self.radius + other_radius
@@ -126,6 +121,23 @@ class Rigid_Body():
             return True
         else:
             return False
+
+    def collision_response(self,other):
+        other_pos = other.parent.physics_object.pos
+        other_mass = other.parent.physics_object.mass
+        own_pos = self.parent.physics_object.pos
+        own_mass = self.parent.physics_object.mass
+
+        relative_position = other_pos - own_pos
+        if relative_position.mag() != 0:
+            normal = relative_position / relative_position.mag()
+
+            J =  normal.x*(normal.x * own_mass + normal.x * other_mass) + normal.y*(normal.y * own_mass + normal.y * other_mass) 
+
+            self.parent.physics_object.vel += J*normal*own_mass
+            other.parent.physics_object.vel += -1*J*normal*other_mass
+            return
+
 
 class Physics_Manager():
     rigid_bodies = []
@@ -141,22 +153,38 @@ class Physics_Manager():
         return
 
     def update_collisions(self):
-        colliding_bodies = []
+        colliding_bodies_lst = []
 
         #Nested if structure for performance
         for own_body in self.rigid_bodies:
             for other_body in self.rigid_bodies:
-                if own_body != other_body:
+                if own_body != other_body and own_body.parent != None and other_body.parent != None: #Bandage solution
                     if own_body.collision_detection(other_body):
-                        if [other_body, own_body] not in colliding_bodies: #Use the fact that rigid_bodies is ordered to check if the pair is already accounted for
-                            colliding_bodies.append([own_body,other_body])
+                        if [other_body, own_body] not in colliding_bodies_lst: #Use the fact that rigid_bodies is ordered to check if the pair is already accounted for
+                            colliding_bodies_lst.append([own_body,other_body])
+
+        for colliding_bodies in colliding_bodies_lst:
+            colliding_bodies[0].collision_response(colliding_bodies[1])
+
+        return
 
     def update_physics(self, dt):
         for physics_object in self.physics_objects:
                 physics_object.physics_update(dt)
         return
 
+    def remove_strange_things(self):
+        for rigid_body in self.rigid_bodies:
+            if rigid_body.parent == None:
+                self.rigid_bodies.remove(rigid_body)
+        
+        for physics_object in self.physics_objects:
+            if physics_object.parent == None:
+                self.physics_objects.remove(physics_object)
+
     def update_all(self, dt):
-        self.draw_bodies(dt)
+        self.remove_strange_things() #bandage solution
         self.update_physics(dt)
+        self.update_collisions()
+        self.draw_bodies(dt)
         return
