@@ -42,14 +42,14 @@ class Game_State():
         if (type(this_object).__name__ == Asteroid and type(other_object).__name__ == Bullet) or (type(other_object).__name__ == Asteroid and type(this_object).__name__ == Bullet):
             if type(this_object).__name__ == Bullet: #
                 other_object.health -= 1
-                this_object.remove(Bullet) #remove this bullet
+                remove_game_object(this_object) #remove this bullet
                 if other_object.health <= 0:
-                    other_object.remove(Asteroid) #also remove the asteroid
+                    remove_game_object(other_object) #also remove the asteroid
             else:
                 this_object.health -= 1
-                other_object.remove(Bullet) #remove this bullet
+                remove_game_object(other_object) #remove this bullet
                 if this_object.health <= 0:
-                    this_object.remove(Asteroid) #also remove the asteroid
+                    remove_game_object(this_object) #also remove the asteroid
 
             player.points_total += 1 #is this correct?
 
@@ -57,11 +57,11 @@ class Game_State():
             if this_object == Spaceship:
                 this_object.health -= 1
                 this_object.physics_object.vel += 0 #velocity needs to stay the same
-                otherobject.remove(Asteroid)
+                remove_game_object(other_object)
             else:
                 other_object.health -= 1
                 other_object.physics_object.vel += 0 #velocity spaceship needs to stay the same
-                this_object.remove(Asteroid)
+                remove_game_object(this_object)
 
             #if self.health <=0:
                     #print("Game Over, your score is:" + str(self.points_total))
@@ -93,7 +93,7 @@ class Game_State():
             for elements in asteroids:
                 coord = Vector2.unpack(elements.physics_object.pos)
                 if 0 > coord[0] > widthscreen or 0 > coord[1] > heightscreen:
-                    asteroids.remove(elements)
+                    remove_game_objects(elements)
 
             coord = player.physics_object.pos.unpack()
             if widthscreen-30 < coord[0] < widthscreen or 0 < coord[0] < 30: #making sure spaceship cant go out of bounds
