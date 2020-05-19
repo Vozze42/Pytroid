@@ -61,10 +61,15 @@ class Vector2:
         
     def unpack(self):
         return [self.x, self.y]
+    
+    def vector_from_angle(angle):
+        x = math.cos(angle)
+        y = math.sin(angle)
+        return Vector2(x,y)
         
 class Physics_Object:
 
-    def __init__(self, mass = 1, pos = Vector2(0,0), vel = Vector2(0,0), accel = Vector2(0,0), moi = 1, ang = 0, ang_vel = 0, ang_accel = 0, momentum = 0, parent = None):
+    def __init__(self, mass = 1, pos = Vector2(0,0), vel = Vector2(0,0), accel = Vector2(0,0), moi = 1, ang = 0, ang_vel = 0, ang_accel = 0, parent = None):
         self.mass = mass
         self.moi = moi
         self.pos = pos
@@ -73,7 +78,6 @@ class Physics_Object:
         self.ang = ang
         self.ang_vel = ang_vel
         self.ang_accel = ang_accel
-        self.momentum = momentum
         self.parent = parent
 
         self.forces = []
@@ -81,6 +85,11 @@ class Physics_Object:
 
     def add_force(self, force):
         self.forces.append(force)
+
+    def set_momentum(self, momentum):
+        velocity_direction = self.vel / self.vel.mag()
+        new_velocity = momentum / self.mass
+        self.vel = velocity_direction * new_velocity
 
     def physics_update(self, dt):
         for force in self.forces:
@@ -96,12 +105,12 @@ class Physics_Object:
             self.ang += 360
 
 class Rigid_Body():
-
     def __init__(self, radius = 1, color = (255,255,255), parent = None, e = 1):
         self.radius = radius
         self.color = color
         self.parent = parent
         self.e = e
+        self.collided = []
         Physics_Manager.rigid_bodies.append(self)
 
     def draw_body(self, screen):
@@ -161,6 +170,8 @@ class Rigid_Body():
 
             other.parent.physics_object.pos += (own_rad + other_rad) * normal
 
+        self.parent.game_state.collision(self.parent, other.parent)
+
 class Physics_Manager():
     rigid_bodies = []
     physics_objects = []
@@ -187,7 +198,6 @@ class Physics_Manager():
 
         for colliding_bodies in colliding_bodies_lst:
             colliding_bodies[0].collision_response(colliding_bodies[1])
-        print(colliding_bodies_lst)
 
         return
 
@@ -196,7 +206,6 @@ class Physics_Manager():
         for physics_object in self.physics_objects:
                 physics_object.physics_update(dt)
                 total_momentum += physics_object.vel.mag() * physics_object.mass
-        print(total_momentum)
         return
 
     def remove_strange_things(self):
