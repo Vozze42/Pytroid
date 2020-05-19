@@ -100,7 +100,7 @@ level_one = 10 #ten asteroids in level one
 time_per_level = 600 #dt = 1/60 --> t = 10
 asteroids = []
 time_asteroid = 100
-max_astroids = 50
+max_astroids = 100
 number_of_astroids = 0
 
 physics_manager = Physics_Manager(screen)

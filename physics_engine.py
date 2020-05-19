@@ -180,7 +180,7 @@ class Physics_Manager():
         #Nested if structure for performance
         for own_body in self.rigid_bodies:
             for other_body in self.rigid_bodies:
-                if self.rigid_bodies.index(own_body) != self.rigid_bodies.index(other_body) and own_body.parent != None and other_body.parent != None: #Bandage solution
+                if own_body != other_body and own_body.parent != None and other_body.parent != None: #Bandage solution
                     if own_body.collision_detection(other_body):
                         if [other_body, own_body] not in colliding_bodies_lst: #Use the fact that rigid_bodies is ordered to check if the pair is already accounted for
                             colliding_bodies_lst.append([own_body,other_body])
