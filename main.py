@@ -152,52 +152,53 @@ class Game_Object():
         self.game_state = game_state
 
 class Level_Manager():
-    def __init__(self, level = 0, dt = 0, level_time = 0, level_prop = 1, asteroids = 0, random = False, level_text = "":
+    def __init__(self, health = 3, level = 0, dt = 0, level_time = 0, level_prop = 1, asteroids = 0, random = False, level_text = "":
         self.level = level
         self.level_prop = level_prop
         self.random = random
         self.level_time = level_time
-        self.waves = [
-            [50, 10000, 1],
-            [50, 10000, 2],
-            [50, 10000, 4],
-            [50, 10000, 1],
-            [50, 10000, 2],
-            [50, 10000, 4]]
 
-    def new_level(self, health):
+    def new_level(self):
+        #set level time of 
         t = 0
-        if self.time >= 10000: #set level time of 
+        if self.time >= 10000:
             self.level += 1
             self.level_text 
             t = 0
             self.level_time = self.waves[self.level[1]]
+            self.level_text = "Level" + str(self.level)
+        elif (self.health <= 0) or (self.level >= len(self.waves)):
+            self.level = 0
+            self.level_text = "Game over"
+            self.health = 3
+            self.points = 0
+            #also reset 
         else:
             t+=dt
-        if (health <= 0) or (self.level >= len(self.waves)): #
-            self.level = 0
-            self.level_text = "Level" + str(self.level)
-        return
-
-    def set_level_props(self):
-        if self.level < 3:
-            self.random = False
-        elif (3 <= self.level < 5):
-            self.random = True
-        else:
-            self.random  = random.choice([True, False])
-        return
-
-    def asteroids_in_level(self):
+            self.level_text = ""
+        #set amount of asteroids
         if self.level < 3:
             self.asteroids = 50
         elif (3 <= self.level < 5):
             self.asteroids = 75
         else:
             self.asteroids += 10
-        return
+        #set direction of asteroids
+        if self.level < 3:
+            self.random = False
+        elif (3 <= self.level < 5):
+            self.random = True
+        else:
+            self.random  = random.choice([True, False])
+        #set sides at which asteroid appears
+        if (self.level%1) or (self.level == 0):
+            self.level_prop = 1
+        if self.level%2:
+            self.level_prop = 2
+        if self.level%3:
+            self.level_prop = 4
         
-
+        return
 
 
 
