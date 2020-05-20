@@ -57,9 +57,6 @@ class Game_State():
                 other_object.physics_object.vel += 0 #velocity spaceship needs to stay the same
                 remove_game_object(this_object)
 
-            #if self.health <=0:
-                    #print("Game Over, your score is:" + str(self.points_total))
-
         return
 
     def remove_game_object(self, game_object):
