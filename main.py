@@ -81,6 +81,8 @@ class Game_State():
             self.dt = self.clock.tick(self.fps)
             self.screen.fill((0, 0, 0))
 
+            current_level = Level_Manager(dt = self.dt, )
+
             asteroid_frequency = self.time_per_level/self.level_one #how often to generate an asteroid
             if self.max_asteroids > len(asteroids) and time_asteroid > asteroid_frequency:
                 current_asteroid = asteroidGenerator(number_of_asteroids)
@@ -150,30 +152,54 @@ class Game_Object():
         self.game_state = game_state
 
 class Level_Manager():
-    def __init__(self, level = 0, level_time = 0, level_prop = 1, random = False):
-        self.level = []
+    def __init__(self, level = 0, dt = 0, level_time = 0, level_prop = 1, asteroids = 0, random = False, level_text = "":
+        self.level = level
         self.level_prop = level_prop
         self.random = random
         self.level_time = level_time
+        self.waves = [
+            [50, 10000, 1],
+            [50, 10000, 2],
+            [50, 10000, 4],
+            [50, 10000, 1],
+            [50, 10000, 2],
+            [50, 10000, 4]]
 
-    def set_level_props(self):
-        self.level = list(range(0,6))
-        for levels in self.level:
-            if levels <= 3:
-                self.random = False
-            else:
-                self.random = True
-        self.level_time
+    def new_level(self, health):
+        t = 0
+        if self.time >= 10000: #set level time of 
+            self.level += 1
+            self.level_text 
+            t = 0
+            self.level_time = self.waves[self.level[1]]
+        else:
+            t+=dt
+        if (health <= 0) or (self.level >= len(self.waves)): #
+            self.level = 0
+            self.level_text = "Level" + str(self.level)
         return
 
-        if self.level <=
-        self.waves = [
-            [50, 10000, 1, False],
-            [50, 10000, 2, False],
-            [50, 10000, 4, False],
-            [50, 10000, 1, True],
-            [50, 10000, 2, True],
-            [50, 10000, 4, True]]
+    def set_level_props(self):
+        if self.level < 3:
+            self.random = False
+        elif (3 <= self.level < 5):
+            self.random = True
+        else:
+            self.random  = random.choice([True, False])
+        return
+
+    def asteroids_in_level(self):
+        if self.level < 3:
+            self.asteroids = 50
+        elif (3 <= self.level < 5):
+            self.asteroids = 75
+        else:
+            self.asteroids += 10
+        return
+        
+
+
+
 
 class Weapon_Manager():
     def __init__(self, gun_cooldown = 1, bullet_damage = 1, bullet_speed = 0.1):
