@@ -62,7 +62,7 @@ class Vector2:
     def unpack(self):
         return [self.x, self.y]
     
-    def vector_from_angle(angle):
+    def vector_from_angle(self, angle):
         x = math.cos(angle)
         y = math.sin(angle)
         return Vector2(x,y)
@@ -134,43 +134,46 @@ class Rigid_Body():
             return False
 
     def collision_response(self,other):
-        other_pos = other.parent.physics_object.pos
-        other_mass = other.parent.physics_object.mass
-        own_pos = self.parent.physics_object.pos
-        own_mass = self.parent.physics_object.mass
-        own_vel = self.parent.physics_object.vel
-        other_vel = other.parent.physics_object.vel
-        own_rad = self.radius
-        other_rad = other.radius
-        own_e = self.e
-        other_e = other.e
+        collison_should_occur = self.parent.game_state.collision(self.parent, other.parent)
 
-        total_radius = own_rad + other_rad
+        if collison_should_occur:
+            other_pos = other.parent.physics_object.pos
+            other_mass = other.parent.physics_object.mass
+            own_pos = self.parent.physics_object.pos
+            own_mass = self.parent.physics_object.mass
+            own_vel = self.parent.physics_object.vel
+            other_vel = other.parent.physics_object.vel
+            own_rad = self.radius
+            other_rad = other.radius
+            own_e = self.e
+            other_e = other.e
 
-        relative_position = other_pos - own_pos
-        relative_velocity = other_vel - own_vel
+            total_radius = own_rad + other_rad
 
-        overlap = relative_position.mag() - total_radius
+            relative_position = other_pos - own_pos
+            relative_velocity = other_vel - own_vel
 
-        e = min(own_e, other_e)
+            overlap = relative_position.mag() - total_radius
 
-        if relative_position.mag() != 0:
-            normal = relative_position / relative_position.mag()
+            e = min(own_e, other_e)
 
-            J = -(1+e)*relative_velocity.dot(normal)/((normal / own_mass + normal / other_mass).dot(normal))
+            if relative_position.mag() != 0:
+                normal = relative_position / relative_position.mag()
 
-            self.parent.physics_object.vel += -1*J*normal/own_mass
-            other.parent.physics_object.vel += 1*J*normal/other_mass
+                J = -(1+e)*relative_velocity.dot(normal)/((normal / own_mass + normal / other_mass).dot(normal))
 
-            self.parent.physics_object.pos += normal * overlap/2
-            other.parent.physics_object.pos -= normal * overlap/2
+                self.parent.physics_object.vel += -1*J*normal/own_mass
+                other.parent.physics_object.vel += 1*J*normal/other_mass
+
+                self.parent.physics_object.pos += normal * overlap/2
+                other.parent.physics_object.pos -= normal * overlap/2
+            else:
+                normal = Vector2(random.randint(0,100),random.randint(0,100))
+                normal = normal / normal.mag()
+
+                other.parent.physics_object.pos += (own_rad + other_rad) * normal
         else:
-            normal = Vector2(random.randint(0,100),random.randint(0,100))
-            normal = normal / normal.mag()
-
-            other.parent.physics_object.pos += (own_rad + other_rad) * normal
-
-        self.parent.game_state.collision(self.parent, other.parent)
+            return
 
 class Physics_Manager():
     rigid_bodies = []
