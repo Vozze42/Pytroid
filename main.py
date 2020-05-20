@@ -75,15 +75,15 @@ class Game_State():
             self.dt = self.clock.tick(self.fps)
             self.screen.fill((0, 0, 0))
 
-            current_level = Level_Manager(dt = self.dt, health =self.health)
+            self.current_level = Level_Manager(dt = self.dt, health =self.health)
             time = 0
 
-            if (current_level.asteroids > len(asteroids)) and (time >= current_level.frequency):
-                current_asteroid = asteroidGenerator(number_of_asteroids)
+            if (self.current_level.asteroids > len(asteroids)) and (time >= self.current_level.frequency):
+                current_asteroid = asteroidGenerator(self.current_level.asteroids, self.current_level.level_prop, self.current_level.random)
                 self.asteroids.append(current_asteroid)
                 time = 0
             else:
-                time += dt
+                time += self.dt
                 
             for elements in self.asteroids:
                 coord = Vector2.unpack(elements.physics_object.pos)
