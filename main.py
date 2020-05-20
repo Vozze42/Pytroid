@@ -163,7 +163,7 @@ class Level_Manager():
                 self.random = False
             else:
                 self.random = True
-        self.level_time
+        self.level_time = 
         return
 
         if self.level <=
