@@ -9,7 +9,6 @@ heightscreen = 1080
 
 class Game_State():
     def __init__(self):
-        self.level_reached = 0
         self.points_total = 0
         self.health = 0
         self.asteroids_broken = 0
@@ -19,13 +18,8 @@ class Game_State():
         self.fps = 60
 
         self.running = True
-        self.level_one = 10 #ten asteroids in level one
-        self.time_per_level = 600 #dt = 1/60 --> t = 10
         self.asteroids = []
         self.bullets = []
-        self.time_asteroid = 100
-        self.max_asteroids = 10
-        self.number_of_asteroids = 0
 
         #[# asteroids], [level duration (ms) ], [waveprop (how many sides)], [random/non random]
 
@@ -42,14 +36,14 @@ class Game_State():
         if (type(this_object).__name__ == Asteroid and type(other_object).__name__ == Bullet) or (type(other_object).__name__ == Asteroid and type(this_object).__name__ == Bullet):
             if type(this_object).__name__ == Bullet: #
                 other_object.health -= 1
-                this_object.remove(Bullet) #remove this bullet
+                remove_game_object(this_object) #remove this bullet
                 if other_object.health <= 0:
-                    other_object.remove(Asteroid) #also remove the asteroid
+                    remove_game_object(other_object) #also remove the asteroid
             else:
                 this_object.health -= 1
-                other_object.remove(Bullet) #remove this bullet
+                remove_game_object(other_object) #remove this bullet
                 if this_object.health <= 0:
-                    this_object.remove(Asteroid) #also remove the asteroid
+                    remove_game_object(this_object) #also remove the asteroid
 
             player.points_total += 1 #is this correct?
 
@@ -57,14 +51,11 @@ class Game_State():
             if this_object == Spaceship:
                 this_object.health -= 1
                 this_object.physics_object.vel += 0 #velocity needs to stay the same
-                otherobject.remove(Asteroid)
+                remove_game_object(other_object)
             else:
                 other_object.health -= 1
                 other_object.physics_object.vel += 0 #velocity spaceship needs to stay the same
-                this_object.remove(Asteroid)
-
-            #if self.health <=0:
-                    #print("Game Over, your score is:" + str(self.points_total))
+                remove_game_object(this_object)
 
         return
 
@@ -81,29 +72,30 @@ class Game_State():
             self.dt = self.clock.tick(self.fps)
             self.screen.fill((0, 0, 0))
 
-            asteroid_frequency = self.time_per_level/self.level_one #how often to generate an asteroid
-            if self.max_asteroids > len(asteroids) and time_asteroid > asteroid_frequency:
-                current_asteroid = asteroidGenerator(number_of_asteroids)
-                asteroids.append(current_asteroid)
-                time_asteroid = 0
-                number_of_asteroids+=1
-            else:
-                time_asteroid+=dt
+            self.current_level = Level_Manager(dt = self.dt, health =self.health)
+            time = 0
 
-            for elements in asteroids:
+            if (self.current_level.asteroids > len(asteroids)) and (time >= self.current_level.frequency):
+                current_asteroid = asteroidGenerator(self.current_level.asteroids, self.current_level.level_prop, self.current_level.random)
+                self.asteroids.append(current_asteroid)
+                time = 0
+            else:
+                time += self.dt
+                
+            for elements in self.asteroids:
                 coord = Vector2.unpack(elements.physics_object.pos)
                 if 0 > coord[0] > widthscreen or 0 > coord[1] > heightscreen:
-                    asteroids.remove(elements)
+                    remove_game_object(elements)
 
-            coord = player.physics_object.pos.unpack()
+            coord = self.player.physics_object.pos.unpack()
             if widthscreen-30 < coord[0] < widthscreen or 0 < coord[0] < 30: #making sure spaceship cant go out of bounds
-                player.physics_object.vel = Vector2.__mul__(player.physics_object.vel, Vector2(-1, 0)) #"bounce" of sides
+                self.player.physics_object.vel = Vector2.__mul__(self.player.physics_object.vel, Vector2(-1, 0)) #"bounce" of sides
             if heightscreen-30 < coord[1] < heightscreen or 0 < coord[1] < 30:
-                player.physics_object.vel = Vector2.__mul__(player.physics_object.vel, Vector2(0, -1))
+                self.player.physics_object.vel = Vector2.__mul__(self.player.physics_object.vel, Vector2(0, -1))
 
-            player_angle = player.physics_object.ang
+            player_angle = self.player.physics_object.ang
 
-            vel_add = 1 #instantaneous velocity added
+            vel_add = 0.01 #instantaneous velocity added
 
 
             for event in pg.event.get():
@@ -150,30 +142,58 @@ class Game_Object():
         self.game_state = game_state
 
 class Level_Manager():
-    def __init__(self, level = 0, level_time = 0, level_prop = 1, random = False):
-        self.level = []
+    def __init__(self, frequency = 0, health = 3, level = 0, dt = 0, level_time = 0, level_prop = 1, asteroids = 0, random = False, level_text = ""):
+        self.level = level
         self.level_prop = level_prop
         self.random = random
         self.level_time = level_time
+        self.level_text = level_text
+        self.asteroids = asteroids
 
-    def set_level_props(self):
-        self.level = list(range(0,6))
-        for levels in self.level:
-            if levels <= 3:
-                self.random = False
-            else:
-                self.random = True
-        self.level_time = 
+    def new_level(self):
+        #set level time of 
+        t = 0
+        if self.time >= 10000:
+            self.level += 1
+            self.level_text 
+            t = 0
+            self.level_time = self.waves[self.level[1]]
+            self.level_text = "Level" + str(self.level)
+        elif (self.health <= 0) or (self.level >= len(self.waves)):
+            self.level = 0
+            self.level_text = "Game over"
+            self.health = 3
+            self.points = 0
+            #also reset 
+        else:
+            t+=dt
+            self.level_text = ""
+        #set amount of asteroids
+        if self.level < 3:
+            self.asteroids = 50
+        elif (3 <= self.level < 5):
+            self.asteroids = 75
+        else:
+            self.asteroids += 10
+        #set direction of asteroids
+        if self.level < 3:
+            self.random = False
+        elif (3 <= self.level < 5):
+            self.random = True
+        else:
+            self.random  = random.choice([True, False])
+        #set sides at which asteroid appears
+        if (self.level%1) or (self.level == 0):
+            self.level_prop = 1
+        if self.level%2:
+            self.level_prop = 2
+        if self.level%3:
+            self.level_prop = 4
+        #asteroid_frequency
+        self.frequency = self.level_time/self.asteroids
         return
 
-        if self.level <=
-        self.waves = [
-            [50, 10000, 1, False],
-            [50, 10000, 2, False],
-            [50, 10000, 4, False],
-            [50, 10000, 1, True],
-            [50, 10000, 2, True],
-            [50, 10000, 4, True]]
+
 
 class Weapon_Manager():
     def __init__(self, gun_cooldown = 1, bullet_damage = 1, bullet_speed = 0.1):
