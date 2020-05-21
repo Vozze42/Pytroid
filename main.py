@@ -6,60 +6,33 @@ import math
 
 class Game_State():
     def __init__(self):
+        Game_Object.game_state = self
+
         self.points_total = 0
         self.health = 0
         self.asteroids_broken = 0
 
         self.game_objects = []
-        
         self.fps = 60
 
-        self.asteroid_index = 1 
+        self.asteroid_index = 1
         self.running = True
-        self.asteroids = []
-        self.bullets = []
 
         self.widthscreen = 1920
         self.heightscreen = 1080
 
         self.init_pygame()
+
         self.physics_manager = Physics_Manager(self.screen)
-        Game_Object.game_state = self
-        self.player = SpaceShip(physics_object = Physics_Object(pos = Vector2(200,150)), rigid_body = Rigid_Body(radius = 10, color= (0,255,0)))
+        self.level_manager = Level_Manager()
+        self.asteroid_manager = Asteroid_Manager()
+
+        self.player = SpaceShip(physics_object = Physics_Object(mass = 100, pos = Vector2(200,150)), rigid_body = Rigid_Body(radius = 10, color= (0,255,0)), health_manager = Health_Manager(hp=500))
 
     def init_pygame(self):
         pg.init()
         self.screen = pg.display.set_mode((self.widthscreen, self.heightscreen))
         self.clock = pg.time.Clock()
-
-    def collision(self, this_object, other_object):
-        collision_should_occur = True
-        if (type(this_object).__name__ == Asteroid and type(other_object).__name__ == Bullet) or (type(other_object).__name__ == Asteroid and type(this_object).__name__ == Bullet):
-            if type(this_object).__name__ == Bullet: #
-                other_object.health -= 1
-                self.remove_game_object(this_object) #remove this bullet
-                if other_object.health <= 0:
-                    self.remove_game_object(other_object) #also remove the asteroid
-            else:
-                this_object.health -= 1
-                self.remove_game_object(other_object) #remove this bullet
-                if this_object.health <= 0:
-                    self.remove_game_object(this_object) #also remove the asteroid
-
-            self.points_total += 1 #is this correct?
-
-        if (type(this_object).__name__ == SpaceShip and type(other_object).__name__ == Asteroid) or (type(other_object).__name__ == SpaceShip and type(this_object).__name__ == Asteroid):
-            if type(this_object).__name__ == SpaceShip:
-                this_object.health -= 1
-                collision_should_occur = False #velocity needs to stay the same
-                self.remove_game_object(other_object)
-            else:
-                other_object.health -= 1
-                collision_should_occur = False
-                self.remove_game_object(this_object)
-
-
-        return collision_should_occur
 
     def remove_game_object(self, game_object):
         if hasattr(game_object, 'physics_object'):
@@ -72,7 +45,7 @@ class Game_State():
         if event.type == pg.KEYDOWN:
             key = event.key
             player_angle = self.player.physics_object.ang
-            vel_add = 0.01 #instantaneous velocity added
+            vel_add = 0.2 #instantaneous velocity added
             if key == pg.K_SPACE:
                 self.player.weapon_manager.shoot_gun()
             #control the spacecraft: TODO: Move to SpaceShip as function
@@ -85,60 +58,24 @@ class Game_State():
             if key == pg.K_f: #ossibility to set velocity to zero, remove if fly_by_wire!!!
                 self.player.physics_object.vel = Vector2(0,0)
             if key == pg.K_w: #go forward
-                self.player.physics_object.vel += Vector2(vel_add*math.cos(player_angle), vel_add*math.sin(player_angle))
+                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang)
+                force_to_add = player_forward*1
+                self.player.physics_object.add_force(force_to_add)
             if key == pg.K_s: #go backward
-                self.player.physics_object.vel += Vector2(vel_add*-math.cos(player_angle), vel_add*math.sin(player_angle))
+                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang)
+                force_to_add = -player_forward*1
+                self.player.physics_object.add_force(force_to_add)
             if key == pg.K_a: #go left
-                self.player.physics_object.vel += Vector2(vel_add*math.sin(player_angle), -vel_add*math.cos(player_angle))
+                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang+0.5*3.14)
+                force_to_add = player_forward*1
+                self.player.physics_object.add_force(force_to_add)
             if key == pg.K_d: #go right
-                self.player.physics_object.vel += Vector2(vel_add*math.sin(player_angle), vel_add*math.cos(player_angle))
+                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang+0.5*3.14)
+                force_to_add = -player_forward*1
+                self.player.physics_object.add_force(force_to_add)
             #close the game
             if key == pg.K_ESCAPE:
                 running = False    
-
-    def asteroidGenerator(self, number_ast, waveprop, random): #set constant initially, increase if wave functionality added
-        if random == True:
-            angle = rd.randint(-40, 40) #angle between x and y component velocity
-        else:
-            angle = 0   
-        momentum = 400
-        mass = rd.randint(60, 100) #avg mass of 80 kg assumed
-        radius = int(mass/4) #with average mass 80, radius average asteroid 20 pixels
-        vel_int = 40/mass #standard total momentum of 400 , avg 50 velocity in pixel/second,
-        ang_vel = 0
-        ang_pos = 0
-        if number_ast%waveprop == 0:
-            pos = Vector2(self.widthscreen, rd.randint(0,self.heightscreen)) #right screen border
-            coord = Vector2.unpack(pos)
-            if coord[1] < 0.5*self.heightscreen:
-                vel = Vector2(-vel_int*math.cos(angle), vel_int*math.sin(abs(angle)))
-            else:
-                vel = Vector2(-vel_int*math.cos(angle), -vel_int*math.sin(abs(angle)))
-        elif number_ast%waveprop == 1:
-            pos = Vector2(0, rd.randint(0,self.heightscreen)) #left screen border #right screen border
-            coord = Vector2.unpack(pos)
-            if coord[1] < 0.5*self.heightscreen:
-                vel = Vector2(vel_int*math.cos(angle), vel_int*math.sin(abs(angle)))
-            else:
-                vel = Vector2(vel_int*math.cos(angle), -vel_int*math.sin(abs(angle)))
-        elif number_ast%waveprop == 2:
-            pos = Vector2(rd.randint(0,self.widthscreen), 0) #left handed coordinate system, [x,y], top_screen border
-            coord = Vector2.unpack(pos)
-            if coord[0] < 0.5*self.widthscreen:
-                vel = Vector2(vel_int*math.sin(abs(angle)), vel_int*math.cos(angle)) #downward, positive y
-            else:
-                vel = Vector2(-vel_int*math.sin(abs(angle)), vel_int*math.cos(angle))
-        elif number_ast%waveprop == 3:
-            pos = Vector2(rd.randint(0,self.widthscreen), self.heightscreen) #bottom screen border
-            coord = Vector2.unpack(pos)
-            if coord[0] < 0.5*self.widthscreen:
-                vel = Vector2(vel_int*math.sin(abs(angle)), -vel_int*math.cos(angle)) #downward, positive y
-            else:
-                vel = Vector2(-vel_int*math.sin(abs(angle)), -vel_int*math.cos(angle))
-
-        current_asteroid = Asteroid(physics_object = Physics_Object(mass = mass, pos = pos, vel = vel), rigid_body = Rigid_Body(radius=radius))
-
-        return current_asteroid
 
     def local_update_game_objects(self):
         for game_object in self.game_objects:
@@ -147,45 +84,9 @@ class Game_State():
         return
 
     def update(self):
-        self.astroid_time = 0
-        self.player.health = 3
         while self.running:
             self.dt = self.clock.tick(self.fps)
             self.screen.fill((0, 0, 0))
-
-            self.current_level = Level_Manager()
-
-            if (self.current_level.asteroids > len(self.asteroids)) and (self.astroid_time > self.current_level.frequency):
-                current_asteroid = self.asteroidGenerator(self.asteroid_index, self.current_level.level_prop, self.current_level.random)
-                self.asteroid_index += 1 
-                self.asteroids.append(current_asteroid)
-                self.astroid_time = 0
-                self.astroid_time += self.dt
-            elif self.current_level.asteroids == len(self.asteroids) and (self.astroid_time >= 2000):
-                self.asteroid_index = 1
-                for astroid_objects in self.asteroids:
-                    self.remove_game_object(astroid_objects)
-            else:
-                self.astroid_time += self.dt
-                
-            for elements in self.asteroids:
-                coord = Vector2.unpack(elements.physics_object.pos)
-                if (0 > coord[0] > self.widthscreen) or (0 > coord[1] > self.heightscreen):
-                    self.remove_game_object(elements)
-
-            coord = self.player.physics_object.pos.unpack()
-            if (self.widthscreen-30 < coord[0] < self.widthscreen):
-                self.player.physics_object.pos += Vector2(-40,0)
-                self.player.physics_object.vel -= 1.5 * self.player.physics_object.vel  #"bounce" of sides
-            if (0 < coord[0] < 30): #making sure spaceship cant go out of bounds
-                self.player.physics_object.pos += Vector2(40,0)
-                self.player.physics_object.vel -= 1.5 * self.player.physics_object.vel  #"bounce" of sides
-            if (self.heightscreen-30 < coord[1] < self.heightscreen):
-                self.player.physics_object.pos += Vector2(0,-40)
-                self.player.physics_object.vel -= 1.5 * self.player.physics_object.vel
-            if (0 < coord[1] < 30):
-                self.player.physics_object.pos += Vector2(0,40)
-                self.player.physics_object.vel -= 1.5 * self.player.physics_object.vel
 
             for event in pg.event.get():
                 self.handle_event(event)
@@ -198,92 +99,239 @@ class Game_State():
 
             pg.display.flip()
 
-
 class Game_Object():
     game_state = None
 
     def __init__(self):
-        self.game_state.game_objects.append(self)
+        if self.game_state != None:
+            self.game_state.game_objects.append(self)
 
 class Level_Manager(Game_Object):
-    def __init__(self, frequency = 200, level = 0, level_time = 10000, level_prop = 1, asteroids = 50, random = False, level_text = ""):
-        self.level = level
+    def __init__(self, frequency = 200, level_number = 0, level_time = 10000, level_prop = 1, asteroids = 20):
+        Game_Object.__init__(self)
+
+        self.level_number = level_number
         self.level_prop = level_prop
-        self.random = random
+        
         self.level_time = level_time
-        self.level_text = level_text
-        self.asteroids = asteroids
-        self.frequency = frequency
+
         self.time = 0
         self.asteroid_amount = 75
-    
-    def local_update(self):
-        self.new_level()
 
-    def new_level(self):
+        self.current_level = Level()
+
+    def update_level(self):
         #set level time of 
-        if self.time >= 12000:
-            self.level += 1
+        if self.time >= self.level_time:
+            self.level_number += 1
             self.time = 0
-            self.level_text = "Level" + str(self.level)
-        elif self.game_state.player.health <= 0:
-            self.level = 0
-            self.asteroid_amount = 75
-            self.level_text = "Game over"
-            self.game_state.player.health = 3
-            self.game_state.points_total = 0
-            #also reset 
-        else:
-            self.time+=self.game_state.dt
-            self.level_text = ""
-        #set amount of asteroids
-        if self.level < 3:
-            self.asteroids = list(range(0,50))
-        elif (3 <= self.level < 5):
-            self.asteroids = list(range(0,75))
-        else:
-            self.asteroid_amount += 10
-            self.asteroids = list(range(0,asteroid_amount))
-        #set direction of asteroids
-        if self.level < 3:
-            self.random = False
-        elif (3 <= self.level < 5):
-            self.random = True
-        else:
-            self.random  = random.choice([True, False])
-        #set sides at which asteroid appears
-        if (self.level%1) or (self.level == 0):
-            self.level_prop = 1
-        if self.level%2:
-            self.level_prop = 2
-        if self.level%3:
-            self.level_prop = 4
-        #asteroid_frequency
-        if self.asteroids != 0:
-            self.frequency = int(self.level_time)/int(len(self.asteroids))
-        return
+            level_text = "Level" + str(self.level_number)
+            asteroid_number = 0
+            asteroid_side = 1
 
-class Weapon_Manager():
-    def __init__(self, gun_cooldown = 1, bullet_damage = 1, bullet_speed = 0.1):
+            #set amount of asteroids
+            if self.level_number < 3:
+                asteroid_number = 20
+            elif (3 <= self.level_number < 5):
+                asteroid_number = 30
+            else:
+                self.asteroid_amount += 5
+                asteroid_number = self.asteroid_amount
+
+            #set direction of asteroids
+            if self.level_number < 3:
+                random = False
+            elif (3 <= self.level_number < 5):
+                random = True
+            else:
+                random  = rd.choice([True, False])
+
+            #set sides at which asteroid appears
+            if (self.level_number%1 == 0) or (self.level_number == 0):
+                asteroid_side = 1
+            if self.level_number%2 == 0:
+                asteroid_side = 2
+            if self.level_number%3 == 0:
+                asteroid_side = 4
+                
+            #asteroid_frequency
+            if asteroid_number != 0:
+                frequency = int(self.level_time)/int(asteroid_number)
+
+            self.current_level = Level(level_text = level_text, asteroid_side = asteroid_side, random = random, asteroid_number = asteroid_number)
+
+        else:
+            self.time += self.game_state.dt
+            self.level_text = ""
+
+    def local_update(self):
+        self.update_level()
+
+class Level():
+    def __init__(self, asteroid_number = 50, level_text = "", random = False, asteroid_side = 1, frequency = 0):
+        self.level_text = level_text
+        self.asteroid_number = asteroid_number
+        self.frequency = frequency
+        self.random = random
+        self.asteroid_side = asteroid_side
+
+class Asteroid_Manager(Game_Object):
+    def __init__(self):
+        Game_Object.__init__(self)
+        self.astroid_time = 0
+        self.asteroids = []
+        self.asteroid_index = 1
+
+    def asteroidGenerator(self, number_ast, waveprop, random): #set constant initially, increase if wave functionality added
+        if random == True:
+            angle = rd.randint(-40, 40) #angle between x and y component velocity
+        else:
+            angle = 0   
+        momentum = 400
+        mass = rd.randint(60, 100) #avg mass of 80 kg assumed
+        radius = int(mass/4) #with average mass 80, radius average asteroid 20 pixels
+        vel_int = rd.randint(10,40)/mass #standard total momentum of 400 , avg 50 velocity in pixel/second,
+        ang_vel = 0
+        ang_pos = 0
+
+        widthscreen = self.game_state.widthscreen
+        heightscreen = self.game_state.heightscreen
+
+        if number_ast%waveprop == 0:
+            pos = Vector2(widthscreen, rd.randint(0,heightscreen)) #right screen border
+            coord = Vector2.unpack(pos)
+            if coord[1] < 0.5*heightscreen:
+                vel = Vector2(-vel_int*math.cos(angle), vel_int*math.sin(abs(angle)))
+            else:
+                vel = Vector2(-vel_int*math.cos(angle), -vel_int*math.sin(abs(angle)))
+        elif number_ast%waveprop == 1:
+            pos = Vector2(0, rd.randint(0,heightscreen)) #left screen border #right screen border
+            coord = Vector2.unpack(pos)
+            if coord[1] < 0.5*heightscreen:
+                vel = Vector2(vel_int*math.cos(angle), vel_int*math.sin(abs(angle)))
+            else:
+                vel = Vector2(vel_int*math.cos(angle), -vel_int*math.sin(abs(angle)))
+        elif number_ast%waveprop == 2:
+            pos = Vector2(rd.randint(0,widthscreen), 0) #left handed coordinate system, [x,y], top_screen border
+            coord = Vector2.unpack(pos)
+            if coord[0] < 0.5*widthscreen:
+                vel = Vector2(vel_int*math.sin(abs(angle)), vel_int*math.cos(angle)) #downward, positive y
+            else:
+                vel = Vector2(-vel_int*math.sin(abs(angle)), vel_int*math.cos(angle))
+        elif number_ast%waveprop == 3:
+            pos = Vector2(rd.randint(0,widthscreen), heightscreen) #bottom screen border
+            coord = Vector2.unpack(pos)
+            if coord[0] < 0.5*widthscreen:
+                vel = Vector2(vel_int*math.sin(abs(angle)), -vel_int*math.cos(angle)) #downward, positive y
+            else:
+                vel = Vector2(-vel_int*math.sin(abs(angle)), -vel_int*math.cos(angle))
+
+        current_asteroid = Asteroid(physics_object = Physics_Object(mass = mass, pos = pos, vel = vel), rigid_body = Rigid_Body(radius=radius))
+
+        return current_asteroid
+
+    def remove_asteroid(self, asteroid):
+        self.asteroids.remove(asteroid)
+
+    def manage_asteroid_spawn(self):
+        current_level = self.game_state.level_manager.current_level        
+        if (current_level.asteroid_number > len(self.asteroids)) and (self.astroid_time > current_level.frequency):
+            current_asteroid = self.asteroidGenerator(self.asteroid_index, current_level.asteroid_side, current_level.random)
+            self.asteroid_index += 1 
+            self.asteroids.append(current_asteroid)
+            self.astroid_time = 0
+        else:
+            self.astroid_time += self.game_state.dt
+
+    def local_update(self):
+        self.manage_asteroid_spawn()
+
+class Health_Manager(Game_Object):
+    def __init__(self, hp = 100, parent = None):
+        Game_Object.__init__(self)
+
+        self.hp = hp
+        self.parent = parent
+
+    def take_damage(self, damage):
+        self.hp -= damage
+
+        if hp <= 0:
+            if hasattr(self.parent, "zero_hp"):
+                self.parent.zero_hp()
+
+class Asteroid(Game_Object):
+    def __init__(self, asteroid_damage = 100, physics_object = Physics_Object(), rigid_body = Rigid_Body(), health_manager = Health_Manager(hp=3)):
+        Game_Object.__init__(self)
+
+        self.physics_object = physics_object
+        self.physics_object.parent = self
+
+        self.rigid_body = rigid_body
+        self.rigid_body.parent = self
+        
+        self.health_manager = Health_Manager()
+        self.health_manager.parent = self
+
+    def local_update(self):
+        self.out_of_bounds()
+
+    def out_of_bounds(self):
+        coord = Vector2.unpack(self.physics_object.pos)
+        radius = self.rigid_body.radius
+        if  coord[0] < 0 - radius or coord[0] > self.game_state.widthscreen + radius or coord[1] < 0 - radius or coord[1] > self.game_state.heightscreen + radius:
+            self.zero_hp()
+    
+    def zero_hp(self):
+        self.game_state.remove_game_object(self)
+        self.game_state.asteroid_manager.asteroids.remove(self)
+
+
+class Weapon_Manager(Game_Object):
+    def __init__(self, gun_cooldown = 1, bullet_damage = 1, bullet_speed = 1, bullet_radius = 2):
+        Game_Object.__init__(self)
         self.parent = None
 
         self.gun_cooldown = gun_cooldown #in ms
         self.bullet_damage = bullet_damage
         self.bullet_speed = bullet_speed
         self.last_gunfire_time = 0
+        self.bullet_radius = bullet_radius
 
     def shoot_gun(self):
         current_time = pg.time.get_ticks()
         shooter = self.parent
         shooter_radius = shooter.rigid_body.radius
+
         if current_time - self.last_gunfire_time > self.gun_cooldown:
-            bullet = Bullet(shooter = shooter, bullet_damage = self.bullet_damage)
-            bullet.physics_object.pos = shooter.physics_object.pos + Vector2.vector_from_angle(shooter.physics_object.ang) * shooter_radius
-            bullet.physics_object.vel = Vector2.vector_from_angle(shooter.physics_object.ang) * self.bullet_speed
+            player_forward =  Vector2().vector_from_angle(shooter.physics_object.ang) 
+            bullet = Bullet(shooter = shooter, bullet_damage = self.bullet_damage, rigid_body = Rigid_Body(radius = self.bullet_radius))
+            bullet.physics_object.pos = shooter.physics_object.pos + player_forward * (shooter_radius + self.bullet_radius + 5) 
+            bullet.physics_object.vel = player_forward * self.bullet_speed
             self.last_gunfire_time = pg.time.get_ticks()
 
+class Bullet(Game_Object):
+    def __init__(self, physics_object=Physics_Object(mass=2), rigid_body = Rigid_Body(radius=2), bullet_damage = 1, shooter = None):
+        Game_Object.__init__(self)
+
+        self.physics_object = physics_object
+        self.physics_object.parent = self
+
+        self.rigid_body = rigid_body
+        self.rigid_body.parent = self
+
+        self.bullet_damage = bullet_damage
+        self.shooter = shooter  
+    
+    def on_collision(self, other):
+        if hasattr(other, "health_manager"):
+            other.health_manager.take_damage(self.bullet_damage) 
+        self.game_state.remove_game_object(self)
+
 class SpaceShip(Game_Object):
-    def __init__(self, health = 3, points_total = 0, physics_object = Physics_Object(), rigid_body = Rigid_Body(), weapon_manager = Weapon_Manager()):
+    def __init__(self, physics_object = Physics_Object(), rigid_body = Rigid_Body(), weapon_manager = Weapon_Manager(), health_manager = Health_Manager()):
+        Game_Object.__init__(self)
+
         self.physics_object = physics_object
         self.physics_object.parent = self
 
@@ -293,33 +341,36 @@ class SpaceShip(Game_Object):
         self.weapon_manager = weapon_manager
         self.weapon_manager.parent = self
 
-        self.game_state.game_objects.append(self)
+        self.health_manager = health_manager
+        self.health_manager.parent = self
 
-        self.health = health
-        self.points_total = points_total
+    def out_of_bounds(self):
+        radius = self.rigid_body.radius
+        widthscreen = self.game_state.widthscreen
+        heightscreen = self.game_state.heightscreen
 
-class Asteroid(Game_Object):
-    def __init__(self, physics_object = Physics_Object(), rigid_body = Rigid_Body()):
-        self.physics_object = physics_object
-        self.physics_object.parent = self
+        inverse_x = Vector2(-1, 1)
+        inverse_y = Vector2(1, -1)
+        test = self.physics_object.vel * inverse_x
+        coord = self.physics_object.pos.unpack()
+        if coord[0] < 0 - radius:
+            self.physics_object.pos = Vector2(0 + radius, coord[1])
+            self.physics_object.vel = self.physics_object.vel.pseudo_cross(inverse_x)
+        if coord[0] > widthscreen + radius:
+            self.physics_object.pos = Vector2(widthscreen - radius, coord[1])
+            self.physics_object.vel = self.physics_object.vel.pseudo_cross(inverse_x)
+        if coord[1] < 0 - radius:
+            self.physics_object.pos = Vector2(coord[0], 0 + radius)
+            self.physics_object.vel = self.physics_object.vel.pseudo_cross(inverse_y)
+        if coord[1] > heightscreen + radius:
+            self.physics_object.pos = Vector2(coord[0], heightscreen - radius)
+            self.physics_object.vel = self.physics_object.vel.pseudo_cross(inverse_y)
 
-        self.rigid_body = rigid_body
-        self.rigid_body.parent = self
+    def zero_hp(self):
+        self.game_state.game_over()
 
-        self.game_state.game_objects.append(self)
-
-class Bullet(Game_Object):
-    def __init__(self, physics_object=Physics_Object(mass=2), rigid_body = Rigid_Body(radius=2), bullet_damage = 1, shooter = None):
-        self.physics_object = physics_object
-        self.physics_object.parent = self
-
-        self.rigid_body = rigid_body
-        self.rigid_body.parent = self
-
-        self.bullet_damage = bullet_damage
-        self.shooter = shooter
-
-        self.game_state.game_objects.append(self)
+    def local_update(self):
+        self.out_of_bounds()
 
 game_state = Game_State()
 game_state.update()

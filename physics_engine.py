@@ -55,6 +55,11 @@ class Vector2:
         y = self.y * other.y
         return x+y
 
+    def pseudo_cross(self,other):
+        x = self.x * other.x
+        y = self.y * other.y
+        return Vector2(x,y)
+
     def get_angle(self):
         angle = math.atan(self.y/self.x)
         return angle
@@ -99,6 +104,10 @@ class Physics_Object:
         self.accel = Vector2()
         self.ang_vel += self.ang_accel * dt
         self.ang += self.ang_vel * dt
+
+        self.forces = []
+        self.accel = Vector2(0,0)
+
         if self.ang > 180:
             self.ang -= 360 #set angular position with switch point at 180 deg
         if self.ang < -180:
@@ -134,46 +143,47 @@ class Rigid_Body():
             return False
 
     def collision_response(self,other):
-        collison_should_occur = self.parent.game_state.collision(self.parent, other.parent)
 
-        if collison_should_occur:
-            other_pos = other.parent.physics_object.pos
-            other_mass = other.parent.physics_object.mass
-            own_pos = self.parent.physics_object.pos
-            own_mass = self.parent.physics_object.mass
-            own_vel = self.parent.physics_object.vel
-            other_vel = other.parent.physics_object.vel
-            own_rad = self.radius
-            other_rad = other.radius
-            own_e = self.e
-            other_e = other.e
+        if hasattr(self.parent, "on_collision"):
+            self.parent.on_collision(other.parent)
+        if hasattr(other.parent, "on_collision"):
+            other.parent.on_collision(other.parent)
 
-            total_radius = own_rad + other_rad
+        other_pos = other.parent.physics_object.pos
+        other_mass = other.parent.physics_object.mass
+        own_pos = self.parent.physics_object.pos
+        own_mass = self.parent.physics_object.mass
+        own_vel = self.parent.physics_object.vel
+        other_vel = other.parent.physics_object.vel
+        own_rad = self.radius
+        other_rad = other.radius
+        own_e = self.e
+        other_e = other.e
 
-            relative_position = other_pos - own_pos
-            relative_velocity = other_vel - own_vel
+        total_radius = own_rad + other_rad
 
-            overlap = relative_position.mag() - total_radius
+        relative_position = other_pos - own_pos
+        relative_velocity = other_vel - own_vel
 
-            e = min(own_e, other_e)
+        overlap = relative_position.mag() - total_radius
 
-            if relative_position.mag() != 0:
-                normal = relative_position / relative_position.mag()
+        e = min(own_e, other_e)
 
-                J = -(1+e)*relative_velocity.dot(normal)/((normal / own_mass + normal / other_mass).dot(normal))
+        if relative_position.mag() != 0:
+            normal = relative_position / relative_position.mag()
 
-                self.parent.physics_object.vel += -1*J*normal/own_mass
-                other.parent.physics_object.vel += 1*J*normal/other_mass
+            J = -(1+e)*relative_velocity.dot(normal)/((normal / own_mass + normal / other_mass).dot(normal))
 
-                self.parent.physics_object.pos += normal * overlap/2
-                other.parent.physics_object.pos -= normal * overlap/2
-            else:
-                normal = Vector2(random.randint(0,100),random.randint(0,100))
-                normal = normal / normal.mag()
+            self.parent.physics_object.vel += -1*J*normal/own_mass
+            other.parent.physics_object.vel += 1*J*normal/other_mass
 
-                other.parent.physics_object.pos += (own_rad + other_rad) * normal
+            self.parent.physics_object.pos += normal * overlap/2
+            other.parent.physics_object.pos -= normal * overlap/2
         else:
-            return
+            normal = Vector2(random.randint(0,100),random.randint(0,100))
+            normal = normal / normal.mag()
+
+            other.parent.physics_object.pos += (own_rad + other_rad) * normal
 
 class Physics_Manager():
     rigid_bodies = []
@@ -185,7 +195,7 @@ class Physics_Manager():
 
     def draw_bodies(self, dt):
         for rigid_body in self.rigid_bodies:
-                rigid_body.draw_body(self.screen)
+            rigid_body.draw_body(self.screen)
         return
 
     def update_collisions(self):
@@ -207,8 +217,8 @@ class Physics_Manager():
     def update_physics(self, dt):
         total_momentum = 0
         for physics_object in self.physics_objects:
-                physics_object.physics_update(dt)
-                total_momentum += physics_object.vel.mag() * physics_object.mass
+            physics_object.physics_update(dt)
+            total_momentum += physics_object.vel.mag() * physics_object.mass
         return
 
     def remove_strange_things(self):
