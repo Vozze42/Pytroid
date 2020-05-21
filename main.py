@@ -148,20 +148,20 @@ class Game_State():
 
     def update(self):
         self.astroid_time = 0
-        self.game_state.player.health = 3
+        self.player.health = 3
         while self.running:
             self.dt = self.clock.tick(self.fps)
             self.screen.fill((0, 0, 0))
 
             self.current_level = Level_Manager()
 
-            if (len(self.current_level.asteroids) > len(self.asteroids)) and (self.astroid_time > self.current_level.frequency):
+            if (self.current_level.asteroids > len(self.asteroids)) and (self.astroid_time > self.current_level.frequency):
                 current_asteroid = self.asteroidGenerator(self.asteroid_index, self.current_level.level_prop, self.current_level.random)
                 self.asteroid_index += 1 
                 self.asteroids.append(current_asteroid)
                 self.astroid_time = 0
                 self.astroid_time += self.dt
-            elif (len(self.current_level.asteroids) == len(self.asteroids)) and (self.astroid_time >= 2000):
+            elif self.current_level.asteroids == len(self.asteroids) and (self.astroid_time >= 2000):
                 self.asteroid_index = 1
                 for astroid_objects in self.asteroids:
                     self.remove_game_object(astroid_objects)
@@ -202,8 +202,7 @@ class Game_State():
 class Game_Object():
     game_state = None
 
-    def __init__(self, game_state):
-        self.game_state = game_state
+    def __init__(self):
         self.game_state.game_objects.append(self)
 
 class Level_Manager(Game_Object):
