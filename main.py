@@ -14,6 +14,7 @@ class Game_State():
         
         self.fps = 60
 
+        self.asteroid_index = 1 
         self.running = True
         self.asteroids = []
         self.bullets = []
@@ -45,7 +46,7 @@ class Game_State():
                 if this_object.health <= 0:
                     self.remove_game_object(this_object) #also remove the asteroid
 
-            self.player.points_total += 1 #is this correct?
+            self.points_total += 1 #is this correct?
 
         if (type(this_object).__name__ == SpaceShip and type(other_object).__name__ == Asteroid) or (type(other_object).__name__ == SpaceShip and type(this_object).__name__ == Asteroid):
             if type(this_object).__name__ == SpaceShip:
@@ -56,6 +57,7 @@ class Game_State():
                 other_object.health -= 1
                 collision_should_occur = False
                 self.remove_game_object(this_object)
+
 
         return collision_should_occur
 
@@ -146,17 +148,23 @@ class Game_State():
 
     def update(self):
         self.astroid_time = 0
-
+        self.game_state.player.health = 3
         while self.running:
             self.dt = self.clock.tick(self.fps)
             self.screen.fill((0, 0, 0))
 
             self.current_level = Level_Manager()
-        
-            if (self.current_level.asteroids >= len(self.asteroids)) and (self.astroid_time >= self.current_level.frequency):
-                current_asteroid = self.asteroidGenerator(self.current_level.asteroids, self.current_level.level_prop, self.current_level.random)
+
+            if (len(self.current_level.asteroids) > len(self.asteroids)) and (self.astroid_time > self.current_level.frequency):
+                current_asteroid = self.asteroidGenerator(self.asteroid_index, self.current_level.level_prop, self.current_level.random)
+                self.asteroid_index += 1 
                 self.asteroids.append(current_asteroid)
                 self.astroid_time = 0
+                self.astroid_time += self.dt
+            elif (len(self.current_level.asteroids) == len(self.asteroids)) and (self.astroid_time >= 2000):
+                self.asteroid_index = 1
+                for astroid_objects in self.asteroids:
+                    self.remove_game_object(astroid_objects)
             else:
                 self.astroid_time += self.dt
                 
@@ -199,7 +207,7 @@ class Game_Object():
         self.game_state.game_objects.append(self)
 
 class Level_Manager(Game_Object):
-    def __init__(self, frequency = 0, level = 0, level_time = 10000, level_prop = 1, asteroids = 50, random = False, level_text = ""):
+    def __init__(self, frequency = 200, level = 0, level_time = 10000, level_prop = 1, asteroids = 50, random = False, level_text = ""):
         self.level = level
         self.level_prop = level_prop
         self.random = random
@@ -208,32 +216,35 @@ class Level_Manager(Game_Object):
         self.asteroids = asteroids
         self.frequency = frequency
         self.time = 0
+        self.asteroid_amount = 75
     
     def local_update(self):
         self.new_level()
 
     def new_level(self):
         #set level time of 
-        if self.time  >= 10000:
+        if self.time >= 12000:
             self.level += 1
             self.time = 0
-            self.level_time = self.waves[self.level[1]]
             self.level_text = "Level" + str(self.level)
         elif self.game_state.player.health <= 0:
             self.level = 0
+            self.asteroid_amount = 75
             self.level_text = "Game over"
             self.game_state.player.health = 3
+            self.game_state.points_total = 0
             #also reset 
         else:
             self.time+=self.game_state.dt
             self.level_text = ""
         #set amount of asteroids
         if self.level < 3:
-            self.asteroids = 50
+            self.asteroids = list(range(0,50))
         elif (3 <= self.level < 5):
-            self.asteroids = 75
+            self.asteroids = list(range(0,75))
         else:
-            self.asteroids += 10
+            self.asteroid_amount += 10
+            self.asteroids = list(range(0,asteroid_amount))
         #set direction of asteroids
         if self.level < 3:
             self.random = False
@@ -250,7 +261,7 @@ class Level_Manager(Game_Object):
             self.level_prop = 4
         #asteroid_frequency
         if self.asteroids != 0:
-            self.frequency = int(self.level_time)/int(self.asteroids)
+            self.frequency = int(self.level_time)/int(len(self.asteroids))
         return
 
 class Weapon_Manager():
