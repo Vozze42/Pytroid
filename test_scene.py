@@ -1,6 +1,6 @@
 import pygame as pg
 import physics_engine as pe
-from physics_engine import Physics_Manager, Physics_Object, Rigid_Body, Vector2
+from physics_engine import Physics_Manager, Physics_Object, Rigid_Body, Vector2, Render_Image, Render_Circle
 import random as rd
 import math
 
@@ -27,7 +27,7 @@ class Game_State():
         self.level_manager = Level_Manager()
         self.asteroid_manager = Asteroid_Manager()
 
-        self.player = SpaceShip(physics_object = Physics_Object(mass = 100, pos = Vector2(200,150)), rigid_body = Rigid_Body(radius = 10, color= (0,255,0)), health_manager = Health_Manager(hp=500))
+        self.player = SpaceShip(physics_object = Physics_Object(mass = 10000, pos = Vector2(200,150)), rigid_body = Rigid_Body(radius = 25), health_manager = Health_Manager(hp=500), render_image=Render_Image("SpaceShip.png"), render_circle= Render_Circle(radius= 0, color=(255,0,0)))
 
     def init_pygame(self):
         pg.init()
@@ -39,6 +39,10 @@ class Game_State():
             self.physics_manager.physics_objects.remove(game_object.physics_object)
         if hasattr(game_object, 'rigid_body'):
             self.physics_manager.rigid_bodies.remove(game_object.rigid_body)
+        if hasattr(game_object, 'render_image'):
+            self.physics_manager.render_images.remove(game_object.render_image)
+        if hasattr(game_object, 'render_circle'):
+            self.physics_manager.render_circles.remove(game_object.render_circle)
         self.game_objects.remove(game_object)
 
     def handle_event(self, event):
@@ -50,11 +54,11 @@ class Game_State():
                 self.player.weapon_manager.shoot_gun()
             #control the spacecraft: TODO: Move to SpaceShip as function
             if key == pg.K_q: #pushing q rotates 10 deg positive
-                self.player.physics_object.ang_vel += 10
+                self.player.physics_object.ang += 5
             if key == pg.K_e: #pushing e rotates -10 deg, 0 deg aligned with x-axis
-                self.player.physics_object.ang_vel -= 10
-            if key == pg.K_r: #possibility to set ang_vel to zero, remove if fly_by_wire!!!
-                self.player.physics_object.ang_vel = 0
+                self.player.physics_object.ang -= 5
+            #if key == pg.K_r: #possibility to set ang_vel to zero, remove if fly_by_wire!!!
+                #self.player.physics_object.ang = 0
             if key == pg.K_f: #ossibility to set velocity to zero, remove if fly_by_wire!!!
                 self.player.physics_object.vel = Vector2(0,0)
             if key == pg.K_w: #go forward
@@ -63,14 +67,16 @@ class Game_State():
                 self.player.physics_object.add_force(force_to_add)
             if key == pg.K_s: #go backward
                 player_forward = Vector2().vector_from_angle(self.player.physics_object.ang)
-                force_to_add = -player_forward*1
+                force_to_add = player_forward*-1
                 self.player.physics_object.add_force(force_to_add)
             if key == pg.K_a: #go left
                 player_forward = Vector2().vector_from_angle(self.player.physics_object.ang+0.5*3.14)
                 force_to_add = player_forward*1
                 self.player.physics_object.add_force(force_to_add)
             if key == pg.K_d: #go right
-                self.player.physics_object.vel += Vector2(vel_add*math.sin(player_angle), vel_add*math.cos(player_angle))
+                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang+0.5*3.14)
+                force_to_add = player_forward*-1
+                self.player.physics_object.add_force(force_to_add)
             #close the game
             if key == pg.K_ESCAPE:
                 running = False    
@@ -80,6 +86,11 @@ class Game_State():
             if hasattr(game_object, "local_update"):
                 game_object.local_update()
         return
+
+    def game_over(self):
+        pg.quit()
+        return
+
 
     def update(self):
         while self.running:
@@ -224,7 +235,7 @@ class Asteroid_Manager(Game_Object):
             else:
                 vel = Vector2(-vel_int*math.sin(abs(angle)), -vel_int*math.cos(angle))
 
-        current_asteroid = Asteroid(physics_object = Physics_Object(mass = mass, pos = pos, vel = vel), rigid_body = Rigid_Body(radius=radius))
+        current_asteroid = Asteroid(physics_object = Physics_Object(mass = mass, pos = pos, vel = vel), rigid_body =  Rigid_Body(radius=radius), render_circle= Render_Circle(radius=radius), health_manager =  Health_Manager(hp=3))
 
         return current_asteroid
 
@@ -242,11 +253,10 @@ class Asteroid_Manager(Game_Object):
             self.astroid_time += self.game_state.dt
 
     def local_update(self):
-        #self.manage_asteroid_spawn()
-        return
+        self.manage_asteroid_spawn()
 
 class Health_Manager(Game_Object):
-    def __init__(self, hp = 100, parent = None):
+    def __init__(self, hp = 3, parent = None):
         Game_Object.__init__(self)
 
         self.hp = hp
@@ -255,22 +265,43 @@ class Health_Manager(Game_Object):
     def take_damage(self, damage):
         self.hp -= damage
 
-        if hp <= 0:
+        if self.hp <= 0:
             if hasattr(self.parent, "zero_hp"):
                 self.parent.zero_hp()
 
 class Asteroid(Game_Object):
-    def __init__(self, asteroid_damage = 100, physics_object = Physics_Object(), rigid_body = Rigid_Body(), health_manager = Health_Manager(hp=3)):
+    def __init__(self, asteroid_damage = 100, physics_object = None, rigid_body = None, health_manager = None, render_circle = None):
         Game_Object.__init__(self)
 
-        self.physics_object = physics_object
-        self.physics_object.parent = self
+        if physics_object == None:
+            self.physics_object = Physics_Object()
+            self.physics_object.parent = self
+        else:
+            self.physics_object = physics_object
+            self.physics_object.parent = self
 
-        self.rigid_body = rigid_body
-        self.rigid_body.parent = self
+        if rigid_body == None:
+            self.rigid_body = Rigid_Body()
+            self.rigid_body.parent = self
+        else:
+            self.rigid_body = rigid_body
+            self.rigid_body.parent = self
         
-        self.health_manager = Health_Manager()
-        self.health_manager.parent = self
+        if health_manager == None:
+            self.health_manager = Health_Manager()
+            self.health_manager.parent = self
+        else:
+            self.health_manager = health_manager
+            self.health_manager.parent = self
+
+        if render_circle == None:
+            self.render_circle = Render_Circle()
+            self.render_circle.parent = self
+        else:
+            self.render_circle = render_circle
+            self.render_circle.parent = self
+
+        self.asteroid_damage = asteroid_damage
 
     def local_update(self):
         self.out_of_bounds()
@@ -281,6 +312,11 @@ class Asteroid(Game_Object):
         if  coord[0] < 0 - radius or coord[0] > self.game_state.widthscreen + radius or coord[1] < 0 - radius or coord[1] > self.game_state.heightscreen + radius:
             self.zero_hp()
     
+    def on_collision(self, other):
+        if isinstance(other, SpaceShip):
+            if hasattr(other, "health_manager"):
+                other.health_manager.take_damage(self.asteroid_damage) 
+
     def zero_hp(self):
         self.game_state.remove_game_object(self)
         self.game_state.asteroid_manager.asteroids.remove(self)
@@ -310,38 +346,88 @@ class Weapon_Manager(Game_Object):
             self.last_gunfire_time = pg.time.get_ticks()
 
 class Bullet(Game_Object):
-    def __init__(self, physics_object = Physics_Object(), rigid_body = Rigid_Body(radius=2), bullet_damage = 1, shooter = None):
+    def __init__(self, physics_object=None, rigid_body = None, bullet_damage = 1, shooter = None):
         Game_Object.__init__(self)
 
-        self.physics_object = Physics_Object()
-        self.physics_object.parent = self
+        if physics_object == None:
+            self.physics_object = Physics_Object(mass=2)
+            self.physics_object.parent = self
+        else:
+            self.physics_object = physics_object
+            self.physics_object.parent = self
 
-        self.rigid_body = rigid_body
-        self.rigid_body.parent = self
+        if rigid_body == None:
+            self.rigid_body = Rigid_Body(radius = 2)
+            self.rigid_body.parent = self
+        else:
+            self.rigid_body = rigid_body
+            self.rigid_body.parent = self
 
         self.bullet_damage = bullet_damage
         self.shooter = shooter  
     
+    def out_of_bounds(self):
+        coord = Vector2.unpack(self.physics_object.pos)
+        radius = self.rigid_body.radius
+        if  coord[0] < 0 - radius or coord[0] > self.game_state.widthscreen + radius or coord[1] < 0 - radius or coord[1] > self.game_state.heightscreen + radius:
+            self.zero_hp()
+
+    def zero_hp(self):
+        self.game_state.remove_game_object(self)
+
     def on_collision(self, other):
         if hasattr(other, "health_manager"):
             other.health_manager.take_damage(self.bullet_damage) 
         self.game_state.remove_game_object(self)
 
+    def local_update(self):
+        self.out_of_bounds()
+
 class SpaceShip(Game_Object):
-    def __init__(self, physics_object = Physics_Object(), rigid_body = Rigid_Body(), weapon_manager = Weapon_Manager(), health_manager = Health_Manager()):
+    def __init__(self, physics_object = None, rigid_body = None, weapon_manager = None, health_manager = None, render_image = None, render_circle = None):
         Game_Object.__init__(self)
 
-        self.physics_object = physics_object
-        self.physics_object.parent = self
+        if physics_object == None:
+            self.physics_object = Physics_Object()
+            self.physics_object.parent = self
+        else:
+            self.physics_object = physics_object
+            self.physics_object.parent = self
 
-        self.rigid_body = rigid_body
-        self.rigid_body.parent = self
+        if rigid_body == None:
+            self.rigid_body = Rigid_Body()
+            self.rigid_body.parent = self
+        else:
+            self.rigid_body = rigid_body
+            self.rigid_body.parent = self
+        
+        if health_manager == None:
+            self.health_manager = Health_Manager()
+            self.health_manager.parent = self
+        else:
+            self.health_manager = health_manager
+            self.health_manager.parent = self
 
-        self.weapon_manager = weapon_manager
-        self.weapon_manager.parent = self
+        if weapon_manager == None:
+            self.weapon_manager = Weapon_Manager()
+            self.weapon_manager.parent = self
+        else:
+            self.weapon_manager = weapon_manager
+            self.weapon_manager.parent = self
 
-        self.health_manager = health_manager
-        self.health_manager.parent = self
+        if render_image == None:
+            self.render_image = Render_Image()
+            self.render_image.parent = self
+        else:
+            self.render_image = render_image
+            self.render_image.parent = self
+
+        if render_circle == None:
+            self.render_circle = Render_Circle()
+            self.render_circle.parent = self
+        else:
+            self.render_circle = render_circle
+            self.render_circle.parent = self
 
     def out_of_bounds(self):
         radius = self.rigid_body.radius
@@ -367,6 +453,11 @@ class SpaceShip(Game_Object):
 
     def zero_hp(self):
         self.game_state.game_over()
+
+    def on_collision(self, other):
+        if isinstance(other, Asteroid):
+            if hasattr(other, "health_manager"):
+                self.game_state.remove_game_object(other)
 
     def local_update(self):
         self.out_of_bounds()

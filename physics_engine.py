@@ -114,19 +114,13 @@ class Physics_Object:
             self.ang += 360
 
 class Rigid_Body():
-    def __init__(self, radius = 1, color = (255,255,255), parent = None, e = 1):
+    def __init__(self, radius = 1, parent = None, e = 1):
         self.radius = radius
-        self.color = color
         self.parent = parent
         self.e = e
         self.collided = []
-        Physics_Manager.rigid_bodies.append(self)
 
-    def draw_body(self, screen):
-        if self.parent != None:
-            coord = self.parent.physics_object.pos.unpack()
-            coord = [int(coord[0]), int(coord[1])]
-            pygame.draw.circle(screen, self.color, coord, int(self.radius))
+        Physics_Manager.rigid_bodies.append(self)
 
     def collision_detection(self, other):
         other_pos = other.parent.physics_object.pos
@@ -143,11 +137,10 @@ class Rigid_Body():
             return False
 
     def collision_response(self,other):
-
         if hasattr(self.parent, "on_collision"):
             self.parent.on_collision(other.parent)
         if hasattr(other.parent, "on_collision"):
-            other.parent.on_collision(other.parent)
+            other.parent.on_collision(self.parent)
 
         other_pos = other.parent.physics_object.pos
         other_mass = other.parent.physics_object.mass
@@ -188,14 +181,19 @@ class Rigid_Body():
 class Physics_Manager():
     rigid_bodies = []
     physics_objects = []
+    render_images = []
+    render_circles = []
     screen = None
 
     def __init__(self, screen):
         self.screen = screen
 
-    def draw_bodies(self, dt):
-        for rigid_body in self.rigid_bodies:
-            rigid_body.draw_body(self.screen)
+    def draw_bodies(self):
+        for render_image in self.render_images:
+            render_image.render_img(self.screen)
+
+        for render_circle in self.render_circles:
+            render_circle.render_circle(self.screen)
         return
 
     def update_collisions(self):
@@ -217,22 +215,53 @@ class Physics_Manager():
     def update_physics(self, dt):
         total_momentum = 0
         for physics_object in self.physics_objects:
-            physics_object.physics_update(dt)
-            total_momentum += physics_object.vel.mag() * physics_object.mass
+            if physics_object.parent != None: #Bandage solution
+                physics_object.physics_update(dt)
         return
-
-    def remove_strange_things(self):
-        for rigid_body in self.rigid_bodies:
-            if rigid_body.parent == None:
-                self.rigid_bodies.remove(rigid_body)
-        
-        for physics_object in self.physics_objects:
-            if physics_object.parent == None:
-                self.physics_objects.remove(physics_object)
 
     def update_all(self, dt):
-        self.remove_strange_things() #bandage solution
         self.update_physics(dt)
         self.update_collisions()
-        self.draw_bodies(dt)
+        self.draw_bodies()
         return
+
+class Render_Circle():
+    def __init__(self, radius = 1, color = (255,255,255), parent = None):
+        self.radius = radius
+        self.color = color
+        self.parent = parent
+        self.collided = []
+
+        Physics_Manager.render_circles.append(self)
+
+    def render_circle(self, screen):
+        if self.parent != None:
+            coord = self.parent.physics_object.pos.unpack()
+            coord = [int(coord[0]), int(coord[1])]
+            pygame.draw.circle(screen, self.color, coord, int(self.radius))
+
+class Render_Image():
+    def __init__(self, image = "", parent = None):
+        self.image_file = image
+        self.image = pygame.image.load(self.image_file)
+        self.image = pygame.transform.rotozoom(self.image, -90, 0.1)
+        self.image_for_angle = []
+        
+        for angle in range(0,355,5):
+            self.image_for_angle.append(pygame.transform.rotozoom(self.image, angle, 0.05))
+
+        Physics_Manager.render_images.append(self)
+
+    def render_img(self, screen):
+        if self.parent != None:
+            angle = self.parent.physics_object.ang
+            coord = self.parent.physics_object.pos.unpack()
+            coord = [int(coord[0]), int(coord[1])]
+            self.getrect = self.image.get_rect()
+            self.getrect.center = (coord[0], coord[1])
+            if angle == 0:
+                screen.blit(self.image, self.getrect)
+            if angle != 0:
+                index = angle/5 - 1
+                screen.blit(self.image_for_angle[index])
+
