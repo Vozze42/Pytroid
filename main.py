@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri May 22 16:13:06 2020
+
+@author: Lennie
+"""
+
 import pygame as pg
 import physics_engine as pe
 from physics_engine import Physics_Manager, Physics_Object, Rigid_Body, Vector2, Render_Image, Render_Circle
@@ -8,8 +16,6 @@ class Game_State():
     def __init__(self):
         Game_Object.game_state = self
 
-        self.points_total = 0
-        self.health = 0
         self.asteroids_broken = 0
 
         self.game_objects = []
@@ -28,6 +34,8 @@ class Game_State():
         self.asteroid_manager = Asteroid_Manager()
 
         self.player = SpaceShip(physics_object = Physics_Object(mass = 1000, pos = Vector2(200,150)), rigid_body = Rigid_Body(radius = 25), health_manager = Health_Manager(hp=500), render_image=Render_Image("SpaceShip.png"))
+        self.points_total = 0
+        self.health = self.player.health_manager.hp
 
     def init_pygame(self):
         pg.init()
@@ -49,32 +57,31 @@ class Game_State():
         if event.type == pg.KEYDOWN:
             key = event.key
             player_angle = self.player.physics_object.ang
-            vel_add = 0.2 #instantaneous velocity added
             if key == pg.K_SPACE:
                 self.player.weapon_manager.shoot_gun()
             #control the spacecraft: TODO: Move to SpaceShip as function
             if key == pg.K_q: #pushing q rotates 10 deg positive
-                self.player.physics_object.ang += 5
+                self.player.physics_object.ang += 10
             if key == pg.K_e: #pushing e rotates -10 deg, 0 deg aligned with x-axis
-                self.player.physics_object.ang -= 5
+                self.player.physics_object.ang -= 10
             #if key == pg.K_r: #possibility to set ang_vel to zero, remove if fly_by_wire!!!
                 #self.player.physics_object.ang = 0
             if key == pg.K_f: #ossibility to set velocity to zero, remove if fly_by_wire!!!
                 self.player.physics_object.vel = Vector2(0,0)
-            if key == pg.K_w: #go forward
-                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang)
+            if key == pg.K_d: #go forward
+                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang_rad)
                 force_to_add = player_forward*1
                 self.player.physics_object.add_force(force_to_add)
-            if key == pg.K_s: #go backward
-                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang)
+            if key == pg.K_a: #go backward
+                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang_rad)
                 force_to_add = player_forward*-1
                 self.player.physics_object.add_force(force_to_add)
-            if key == pg.K_a: #go left
-                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang+0.5*3.14)
+            if key == pg.K_s: #go left
+                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang_rad+0.5*3.1415)
                 force_to_add = player_forward*1
                 self.player.physics_object.add_force(force_to_add)
-            if key == pg.K_d: #go right
-                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang+0.5*3.14)
+            if key == pg.K_w: #go right
+                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang_rad+0.5*3.1415)
                 force_to_add = player_forward*-1
                 self.player.physics_object.add_force(force_to_add)
             #close the game
@@ -88,7 +95,15 @@ class Game_State():
         return
 
     def game_over(self):
-        pg.quit()
+        self.points_total = 0
+        self.player.health_manager.hp = 500
+        for game_object in self.game_objects:
+            self.remove_game_object(game_object)
+        self.player.pos = Vector2(100,100)
+        self.player.vel = Vector2(0,0)
+        self.level_manager.level_number = 1
+        self.level_manager.asteroid_amount = 20
+        
         return
 
 
@@ -96,6 +111,8 @@ class Game_State():
         while self.running:
             self.dt = self.clock.tick(self.fps)
             self.screen.fill((0, 0, 0))
+
+            setText()
 
             for event in pg.event.get():
                 self.handle_event(event)
@@ -107,6 +124,21 @@ class Game_State():
             self.physics_manager.update_all(self.dt)
 
             pg.display.flip()
+
+class setText():
+    def __init__(self, x=100, y=100):
+        self.x = x
+        self.y = y
+        
+    def updateText(self):
+        self.display_surface = pg.display.set_mode((100,20))
+        pg.display.set_caption("Health: " + str(self.game_state.player.health_manager.hp) + ". Points: " +str(self.game_state.points_total) + ". Level: " + str(self.game_state.level_manager.current_level))
+        font = pg.font.Font('freesansbold.ttf', 32) 
+        white = (255,255,255)
+        text = font.render('GeeksForGeeks', True, white, white) 
+        textRect = text.get_rect() 
+        textRect.center = (self.x, self.y) 
+  
 
 class Game_Object():
     game_state = None
@@ -125,7 +157,7 @@ class Level_Manager(Game_Object):
         self.level_time = level_time
 
         self.time = 0
-        self.asteroid_amount = 75
+        self.asteroid_amount = 20
 
         self.current_level = Level()
 
@@ -135,8 +167,8 @@ class Level_Manager(Game_Object):
             self.level_number += 1
             self.time = 0
             level_text = "Level" + str(self.level_number)
-            asteroid_number = 0
             asteroid_side = 1
+            asteroid_number = 20
 
             #set amount of asteroids
             if self.level_number < 3:
@@ -165,7 +197,7 @@ class Level_Manager(Game_Object):
                 
             #asteroid_frequency
             if asteroid_number != 0:
-                frequency = int(self.level_time)/int(asteroid_number)
+                self.frequency = int(self.level_time)/int(asteroid_number)
 
             self.current_level = Level(level_text = level_text, asteroid_side = asteroid_side, random = random, asteroid_number = asteroid_number)
 
@@ -339,8 +371,8 @@ class Weapon_Manager(Game_Object):
         shooter_radius = shooter.rigid_body.radius
 
         if current_time - self.last_gunfire_time > self.gun_cooldown:
-            player_forward =  Vector2().vector_from_angle(shooter.physics_object.ang) 
-            
+            player_forward =  Vector2().vector_from_angle(self.game_state.player.physics_object.ang_rad)
+          '''Refer to angle in radians of shooter here to fix angle of shooting!!!!!!!! '''  
             bullet = Bullet(
             shooter = shooter, 
             bullet_damage = self.bullet_damage, 

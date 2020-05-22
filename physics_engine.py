@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri May 22 16:13:39 2020
+
+@author: Lennie
+"""
+
 import math
 import pygame
 import random
@@ -81,6 +89,7 @@ class Physics_Object:
         self.vel = vel
         self.accel = accel
         self.ang = ang
+        self.ang_rad = ang*3.1415/360
         self.ang_vel = ang_vel
         self.ang_accel = ang_accel
         self.parent = parent
@@ -108,10 +117,10 @@ class Physics_Object:
         self.forces = []
         self.accel = Vector2(0,0)
 
-        if self.ang > 180:
-            self.ang -= 360 #set angular position with switch point at 180 deg
-        if self.ang < -180:
-            self.ang += 360
+        if self.ang_rad > 2*3.1415:
+            self.ang_rad -= 2*3.1415 #set angular position with switch point at 180 deg
+        if self.ang_rad < -2*3.1415:
+            self.ang_rad += 2*3.1415
 
 class Rigid_Body():
     def __init__(self, radius = 1, parent = None, e = 1):
@@ -247,8 +256,8 @@ class Render_Image():
         self.image = pygame.transform.rotozoom(self.image, -90, 0.1)
         self.image_for_angle = []
         
-        for angle in range(0,355,5):
-            self.image_for_angle.append(pygame.transform.rotozoom(self.image, angle, 0.05))
+        for angle in range(0,360,10):
+            self.image_for_angle.append(pygame.transform.rotozoom(self.image, angle, 1))
 
         Physics_Manager.render_images.append(self)
 
@@ -259,9 +268,13 @@ class Render_Image():
             coord = [int(coord[0]), int(coord[1])]
             self.getrect = self.image.get_rect()
             self.getrect.center = (coord[0], coord[1])
+            if angle >=360:
+                angle -= 360
+            if angle <0:
+                angle += 360
             if angle == 0:
                 screen.blit(self.image, self.getrect)
             if angle != 0:
-                index = angle/5 - 1
-                screen.blit(self.image_for_angle[index])
-
+                
+                index = angle/10 - 1
+                screen.blit(self.image_for_angle[int(index)], self.getrect)
