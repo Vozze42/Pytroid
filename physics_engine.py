@@ -3,7 +3,7 @@
 """
 Created on Fri May 22 16:13:39 2020
 
-@author: Lennie
+@author: Servaas & Lennart
 """
 
 import math
@@ -89,8 +89,9 @@ class Physics_Object:
         self.vel = vel
         self.accel = accel
         self.ang = ang
-        self.ang_rad = ang*3.1415/360
         self.ang_vel = ang_vel
+        self.ang_rad = ang*3.1415/360
+        self.ang_vel_rad = ang_vel*3.1415/360
         self.ang_accel = ang_accel
         self.parent = parent
 
@@ -113,10 +114,17 @@ class Physics_Object:
         self.accel = Vector2()
         self.ang_vel += self.ang_accel * dt
         self.ang += self.ang_vel * dt
+        self.ang_vel += self.ang_accel * dt
+        self.ang_rad += self.ang_vel_rad * dt
 
         self.forces = []
         self.accel = Vector2(0,0)
-
+        
+        if self.ang >= 360:
+            self.ang -= 360
+        if self.ang < 0:
+            self.ang += 360
+        
         if self.ang_rad > 2*3.1415:
             self.ang_rad -= 2*3.1415 #set angular position with switch point at 180 deg
         if self.ang_rad < -2*3.1415:
@@ -252,29 +260,28 @@ class Render_Circle():
 class Render_Image():
     def __init__(self, image = "", parent = None):
         self.image_file = image
+        self.image_rotate = pygame.image.load(self.image_file)
         self.image = pygame.image.load(self.image_file)
         self.image = pygame.transform.rotozoom(self.image, -90, 0.1)
         self.image_for_angle = []
         
-        for angle in range(0,360,10):
-            self.image_for_angle.append(pygame.transform.rotozoom(self.image, angle, 1))
-
+        for angle in range(0,400,10):
+            self.image_for_angle.append(pygame.transform.rotozoom(self.image_rotate, angle-90, 0.1))
+        
         Physics_Manager.render_images.append(self)
 
     def render_img(self, screen):
         if self.parent != None:
-            angle = self.parent.physics_object.ang
             coord = self.parent.physics_object.pos.unpack()
             coord = [int(coord[0]), int(coord[1])]
             self.getrect = self.image.get_rect()
             self.getrect.center = (coord[0], coord[1])
-            if angle >=360:
-                angle -= 360
-            if angle <0:
-                angle += 360
-            if angle == 0:
-                screen.blit(self.image, self.getrect)
-            if angle != 0:
-                
-                index = angle/10 - 1
-                screen.blit(self.image_for_angle[int(index)], self.getrect)
+            if self.parent.physics_object.ang == 0:
+                screen.blit(self.image, self.getrect) 
+            
+            if self.parent.physics_object.ang != 0:
+                self.image_angle = pygame.transform.rotozoom(self.image, abs(myround(self.parent.physics_object.ang,10)), 1)
+                screen.blit(self.image_angle, self.getrect)
+
+def myround(x, base):
+        return base * round(x/base)

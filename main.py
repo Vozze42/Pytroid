@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri May 22 16:13:06 2020
-
-@author: Lennie
+@author: Servaas & Lennart
 """
 
 import pygame as pg
@@ -33,7 +31,7 @@ class Game_State():
         self.level_manager = Level_Manager()
         self.asteroid_manager = Asteroid_Manager()
 
-        self.player = SpaceShip(physics_object = Physics_Object(mass = 1000, pos = Vector2(200,150)), rigid_body = Rigid_Body(radius = 25), health_manager = Health_Manager(hp=500), render_image=Render_Image("SpaceShip.png"))
+        self.player = SpaceShip(physics_object = Physics_Object(mass = 1000, pos = Vector2(200,150), ang_vel = 0), rigid_body = Rigid_Body(radius = 25), health_manager = Health_Manager(hp=500), render_image=Render_Image("SpaceShip.png"))
         self.points_total = 0
         self.health = self.player.health_manager.hp
 
@@ -56,14 +54,15 @@ class Game_State():
     def handle_event(self, event):
         if event.type == pg.KEYDOWN:
             key = event.key
-            player_angle = self.player.physics_object.ang
             if key == pg.K_SPACE:
                 self.player.weapon_manager.shoot_gun()
             #control the spacecraft: TODO: Move to SpaceShip as function
             if key == pg.K_q: #pushing q rotates 10 deg positive
-                self.player.physics_object.ang += 10
+                if -0.25 <= self.player.physics_object.ang_vel <=0.25:
+                    self.player.physics_object.ang_vel += 0.05
             if key == pg.K_e: #pushing e rotates -10 deg, 0 deg aligned with x-axis
-                self.player.physics_object.ang -= 10
+                if -0.25 <= self.player.physics_object.ang_vel <=0.25:
+                    self.player.physics_object.ang_vel -= 0.05
             #if key == pg.K_r: #possibility to set ang_vel to zero, remove if fly_by_wire!!!
                 #self.player.physics_object.ang = 0
             if key == pg.K_f: #ossibility to set velocity to zero, remove if fly_by_wire!!!
@@ -372,7 +371,7 @@ class Weapon_Manager(Game_Object):
 
         if current_time - self.last_gunfire_time > self.gun_cooldown:
             player_forward =  Vector2().vector_from_angle(self.game_state.player.physics_object.ang_rad)
-          '''Refer to angle in radians of shooter here to fix angle of shooting!!!!!!!! '''  
+            '''Refer to angle in radians of shooter here to fix angle of shooting!!!!!!!! '''  
             bullet = Bullet(
             shooter = shooter, 
             bullet_damage = self.bullet_damage, 
