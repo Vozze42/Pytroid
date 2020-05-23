@@ -372,7 +372,7 @@ class Weapon_Manager(Game_Object):
 
         if current_time - self.last_gunfire_time > self.gun_cooldown:
             player_forward =  Vector2().vector_from_angle(self.game_state.player.physics_object.ang_rad)
-          '''Refer to angle in radians of shooter here to fix angle of shooting!!!!!!!! '''  
+            '''Refer to angle in radians of shooter here to fix angle of shooting!!!!!!!! '''  
             bullet = Bullet(
             shooter = shooter, 
             bullet_damage = self.bullet_damage, 
