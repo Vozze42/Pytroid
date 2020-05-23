@@ -90,8 +90,6 @@ class Physics_Object:
         self.accel = accel
         self.ang = ang
         self.ang_vel = ang_vel
-        self.ang_rad = ang*3.1415/360
-        self.ang_vel_rad = ang_vel*3.1415/360
         self.ang_accel = ang_accel
         self.parent = parent
 
@@ -115,20 +113,14 @@ class Physics_Object:
         self.ang_vel += self.ang_accel * dt
         self.ang += self.ang_vel * dt
         self.ang_vel += self.ang_accel * dt
-        self.ang_rad += self.ang_vel_rad * dt
 
         self.forces = []
         self.accel = Vector2(0,0)
         
-        if self.ang >= 360:
-            self.ang -= 360
-        if self.ang < 0:
-            self.ang += 360
-        
-        if self.ang_rad > 2*3.1415:
-            self.ang_rad -= 2*3.1415 #set angular position with switch point at 180 deg
-        if self.ang_rad < -2*3.1415:
-            self.ang_rad += 2*3.1415
+        while self.ang >= 2*math.pi:
+            self.ang -= 2*math.pi
+        while self.ang < 0:
+            self.ang += 2*math.pi
 
 class Rigid_Body():
     def __init__(self, radius = 1, parent = None, e = 1):
@@ -280,7 +272,7 @@ class Render_Image():
                 screen.blit(self.image, self.getrect) 
             
             if self.parent.physics_object.ang != 0:
-                self.image_angle = pygame.transform.rotozoom(self.image, abs(myround(self.parent.physics_object.ang,10)), 1)
+                self.image_angle = pygame.transform.rotozoom(self.image, myround(math.degrees(self.parent.physics_object.ang),10), 1)
                 screen.blit(self.image_angle, self.getrect)
 
 def myround(x, base):

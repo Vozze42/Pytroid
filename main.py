@@ -68,19 +68,19 @@ class Game_State():
             if key == pg.K_f: #ossibility to set velocity to zero, remove if fly_by_wire!!!
                 self.player.physics_object.vel = Vector2(0,0)
             if key == pg.K_d: #go forward
-                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang_rad)
+                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang)
                 force_to_add = player_forward*1
                 self.player.physics_object.add_force(force_to_add)
             if key == pg.K_a: #go backward
-                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang_rad)
+                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang)
                 force_to_add = player_forward*-1
                 self.player.physics_object.add_force(force_to_add)
             if key == pg.K_s: #go left
-                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang_rad+0.5*3.1415)
+                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang+0.5*3.1415)
                 force_to_add = player_forward*1
                 self.player.physics_object.add_force(force_to_add)
             if key == pg.K_w: #go right
-                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang_rad+0.5*3.1415)
+                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang+0.5*3.1415)
                 force_to_add = player_forward*-1
                 self.player.physics_object.add_force(force_to_add)
             #close the game
@@ -224,7 +224,7 @@ class Asteroid_Manager(Game_Object):
 
     def asteroidGenerator(self, number_ast, waveprop, random): #set constant initially, increase if wave functionality added
         if random == True:
-            angle = rd.randint(-40, 40) #angle between x and y component velocity
+            angle = math.radians(rd.randint(-40, 40)) #angle between x and y component velocity
         else:
             angle = 0   
         momentum = 400
@@ -370,7 +370,7 @@ class Weapon_Manager(Game_Object):
         shooter_radius = shooter.rigid_body.radius
 
         if current_time - self.last_gunfire_time > self.gun_cooldown:
-            player_forward =  Vector2().vector_from_angle(self.game_state.player.physics_object.ang_rad)
+            player_forward =  Vector2().vector_from_angle(self.game_state.player.physics_object.ang)
             '''Refer to angle in radians of shooter here to fix angle of shooting!!!!!!!! '''  
             bullet = Bullet(
             shooter = shooter, 
