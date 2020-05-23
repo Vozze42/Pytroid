@@ -9,10 +9,14 @@ import physics_engine as pe
 from physics_engine import Physics_Manager, Physics_Object, Rigid_Body, Vector2, Render_Image, Render_Circle
 import random as rd
 import math
+import os
 
 class Game_State():
     def __init__(self):
+        
         Game_Object.game_state = self
+        
+        self.defaultfont = pg.font.get_default_font()
 
         self.asteroids_broken = 0
 
@@ -33,7 +37,8 @@ class Game_State():
 
         self.player = SpaceShip(physics_object = Physics_Object(mass = 1000, pos = Vector2(200,150), ang_vel = 0), rigid_body = Rigid_Body(radius = 25), health_manager = Health_Manager(hp=500), render_image=Render_Image("SpaceShip.png"))
         self.points_total = 0
-        self.health = self.player.health_manager.hp
+        
+        self.stats = Text_Stats()
 
     def init_pygame(self):
         pg.init()
@@ -63,8 +68,8 @@ class Game_State():
             if key == pg.K_e: #pushing e rotates -10 deg, 0 deg aligned with x-axis
                 if -0.0045 <= self.player.physics_object.ang_vel <=0.0045:
                     self.player.physics_object.ang_vel -= 0.0015
-            #if key == pg.K_r: #possibility to set ang_vel to zero, remove if fly_by_wire!!!
-                #self.player.physics_object.ang = 0
+            if key == pg.K_r: #possibility to set ang_vel to zero, remove if fly_by_wire!!!
+                self.player.physics_object.ang_vel = 0
             if key == pg.K_f: #ossibility to set velocity to zero, remove if fly_by_wire!!!
                 self.player.physics_object.vel = Vector2(0,0)
             if key == pg.K_d: #go forward
@@ -100,19 +105,16 @@ class Game_State():
             self.remove_game_object(game_object)
         self.player.pos = Vector2(100,100)
         self.player.vel = Vector2(0,0)
+        self.current_level = Level()
         self.level_manager.level_number = 1
         self.level_manager.asteroid_amount = 20
         
         return
-
-
+        
     def update(self):
         while self.running:
             self.dt = self.clock.tick(self.fps)
             self.screen.fill((0, 0, 0))
-
-            setText()
-
             for event in pg.event.get():
                 self.handle_event(event)
 
@@ -124,20 +126,6 @@ class Game_State():
 
             pg.display.flip()
 
-class setText():
-    def __init__(self, x=100, y=100):
-        self.x = x
-        self.y = y
-        
-    def updateText(self):
-        self.display_surface = pg.display.set_mode((100,20))
-        pg.display.set_caption("Health: " + str(self.game_state.player.health_manager.hp) + ". Points: " +str(self.game_state.points_total) + ". Level: " + str(self.game_state.level_manager.current_level))
-        font = pg.font.Font('freesansbold.ttf', 32) 
-        white = (255,255,255)
-        text = font.render('GeeksForGeeks', True, white, white) 
-        textRect = text.get_rect() 
-        textRect.center = (self.x, self.y) 
-  
 
 class Game_Object():
     game_state = None
@@ -145,6 +133,7 @@ class Game_Object():
     def __init__(self):
         if self.game_state != None:
             self.game_state.game_objects.append(self)
+
 
 class Level_Manager(Game_Object):
     def __init__(self, frequency = 200, level_number = 0, level_time = 10000, level_prop = 1, asteroids = 20):
@@ -351,7 +340,7 @@ class Asteroid(Game_Object):
 
 
 class Weapon_Manager(Game_Object):
-    def __init__(self, gun_cooldown = 1, bullet_damage = 1, bullet_speed = 1, bullet_radius = 2):
+    def __init__(self, gun_cooldown = 1, bullet_damage = 1, bullet_speed = 0.75, bullet_radius = 2):
         Game_Object.__init__(self)
         self.parent = None
 
@@ -420,6 +409,8 @@ class Bullet(Game_Object):
     def on_collision(self, other):
         if hasattr(other, "health_manager"):
             other.health_manager.take_damage(self.bullet_damage) 
+            self.game_state.asteroids_broken += 1
+            self.game_state.points_total += 1
         self.game_state.remove_game_object(self)
 
     def local_update(self):
@@ -496,6 +487,38 @@ class SpaceShip(Game_Object):
 
     def local_update(self):
         self.out_of_bounds()
+
+class Text_Stats(Game_Object):
+    def __init__(self, x=10, y=10):
+        Game_Object.__init__(self)
+
+        self.x = x
+        self.y = y
+
+    def draw_text(self,text, size, color, position, middle):
+        text = str(text)
+
+        default_font = pg.font.get_default_font()
+        self.font = pg.font.Font(default_font, size)
+
+        textsurface = self.font.render(text, False, color)
+        if middle:
+            offset = textsurface.get_size()
+            position = (position[0] - offset[0] / 2, position[1] - offset[1] / 2)
+
+        self.game_state.screen.blit(textsurface, position)
+    
+    def update_text(self):
+        WHITE = (255,255,255)
+
+        self.draw_text("Level: "+str(self.game_state.level_manager.level_number), 40, WHITE, (4, 0), False)
+        self.draw_text("Health: "+str(self.game_state.player.health_manager.hp), 40, WHITE, (4, 40), False)
+        self.draw_text("Points total: "+str(self.game_state.points_total), 40, WHITE, (4, 80), False)
+        self.draw_text("Asteroids broken: "+str(self.game_state.asteroids_broken), 40, WHITE, (4, 120), False)
+
+    def local_update(self):
+        self.update_text()
+
 
 game_state = Game_State()
 game_state.update()

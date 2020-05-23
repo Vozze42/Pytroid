@@ -271,8 +271,11 @@ class Render_Image():
                 screen.blit(self.image, self.getrect) 
             
             if self.parent.physics_object.ang != 0:
-                self.image_angle = pygame.transform.rotozoom(self.image, myround(math.degrees(self.parent.physics_object.ang),10), 1)
-                screen.blit(self.image_angle, self.getrect)
+                center = (coord[0], coord[1])
+                rotated_image = pygame.transform.rotate(self.image, myround(math.degrees(self.parent.physics_object.ang),1))
+                new_rect = rotated_image.get_rect(center = center)
+
+                screen.blit(rotated_image, new_rect)                
 
 def myround(x, base):
         return base * round(x/base)
