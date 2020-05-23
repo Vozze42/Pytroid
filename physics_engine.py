@@ -112,7 +112,6 @@ class Physics_Object:
         self.accel = Vector2()
         self.ang_vel += self.ang_accel * dt
         self.ang += self.ang_vel * dt
-        self.ang_vel += self.ang_accel * dt
 
         self.forces = []
         self.accel = Vector2(0,0)

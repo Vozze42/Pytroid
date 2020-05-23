@@ -58,11 +58,11 @@ class Game_State():
                 self.player.weapon_manager.shoot_gun()
             #control the spacecraft: TODO: Move to SpaceShip as function
             if key == pg.K_q: #pushing q rotates 10 deg positive
-                if -0.25 <= self.player.physics_object.ang_vel <=0.25:
-                    self.player.physics_object.ang_vel += 0.05
+                if -0.0045 <= self.player.physics_object.ang_vel <=0.0045:
+                    self.player.physics_object.ang_vel += 0.0015
             if key == pg.K_e: #pushing e rotates -10 deg, 0 deg aligned with x-axis
-                if -0.25 <= self.player.physics_object.ang_vel <=0.25:
-                    self.player.physics_object.ang_vel -= 0.05
+                if -0.0045 <= self.player.physics_object.ang_vel <=0.0045:
+                    self.player.physics_object.ang_vel -= 0.0015
             #if key == pg.K_r: #possibility to set ang_vel to zero, remove if fly_by_wire!!!
                 #self.player.physics_object.ang = 0
             if key == pg.K_f: #ossibility to set velocity to zero, remove if fly_by_wire!!!
@@ -76,11 +76,11 @@ class Game_State():
                 force_to_add = player_forward*-1
                 self.player.physics_object.add_force(force_to_add)
             if key == pg.K_s: #go left
-                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang+0.5*3.1415)
+                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang+0.5*math.pi)
                 force_to_add = player_forward*1
                 self.player.physics_object.add_force(force_to_add)
             if key == pg.K_w: #go right
-                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang+0.5*3.1415)
+                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang+0.5*math.pi)
                 force_to_add = player_forward*-1
                 self.player.physics_object.add_force(force_to_add)
             #close the game
@@ -227,12 +227,9 @@ class Asteroid_Manager(Game_Object):
             angle = math.radians(rd.randint(-40, 40)) #angle between x and y component velocity
         else:
             angle = 0   
-        momentum = 400
         mass = rd.randint(60, 100) #avg mass of 80 kg assumed
         radius = int(mass/4) #with average mass 80, radius average asteroid 20 pixels
         vel_int = rd.randint(10,40)/mass #standard total momentum of 400 , avg 50 velocity in pixel/second,
-        ang_vel = 0
-        ang_pos = 0
 
         widthscreen = self.game_state.widthscreen
         heightscreen = self.game_state.heightscreen
@@ -266,7 +263,7 @@ class Asteroid_Manager(Game_Object):
             else:
                 vel = Vector2(-vel_int*math.sin(abs(angle)), -vel_int*math.cos(angle))
 
-        current_asteroid = Asteroid(physics_object = Physics_Object(mass = mass, pos = pos, vel = vel), rigid_body =  Rigid_Body(radius=radius), render_circle= Render_Circle(radius=radius), health_manager =  Health_Manager(hp=3))
+        current_asteroid = Asteroid(physics_object = Physics_Object(mass = mass, pos = pos, vel = vel), rigid_body =  Rigid_Body(radius=radius), render_circle= Render_Circle(radius=radius), health_manager =  Health_Manager(hp=1))
 
         return current_asteroid
 
@@ -370,8 +367,8 @@ class Weapon_Manager(Game_Object):
         shooter_radius = shooter.rigid_body.radius
 
         if current_time - self.last_gunfire_time > self.gun_cooldown:
-            player_forward =  Vector2().vector_from_angle(self.game_state.player.physics_object.ang)
-            '''Refer to angle in radians of shooter here to fix angle of shooting!!!!!!!! '''  
+            player_forward =  Vector2().vector_from_angle(-self.game_state.player.physics_object.ang)
+            '''Refer to angle in radians of shooter here to fix angle of shooting!!!!!!!! ''' 
             bullet = Bullet(
             shooter = shooter, 
             bullet_damage = self.bullet_damage, 
