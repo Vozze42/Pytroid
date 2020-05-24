@@ -15,8 +15,6 @@ class Game_State():
     def __init__(self):
         
         Game_Object.game_state = self
-        
-        self.defaultfont = pg.font.get_default_font()
 
         self.asteroids_broken = 0
 
@@ -101,14 +99,14 @@ class Game_State():
     def game_over(self):
         self.points_total = 0
         self.player.health_manager.hp = 500
+        '''
         for game_object in self.game_objects:
             self.remove_game_object(game_object)
-        self.player.pos = Vector2(100,100)
+        '''
         self.player.vel = Vector2(0,0)
-        self.current_level = Level()
+        self.asteroids_broken = 0
         self.level_manager.level_number = 1
-        self.level_manager.asteroid_amount = 20
-        
+        self.level_manager.time = 0
         return
         
     def update(self):
@@ -136,7 +134,7 @@ class Game_Object():
 
 
 class Level_Manager(Game_Object):
-    def __init__(self, frequency = 200, level_number = 0, level_time = 10000, level_prop = 1, asteroids = 20):
+    def __init__(self, frequency = 200, level_number = 1, level_time = 10000, level_prop = 1, asteroids = 20):
         Game_Object.__init__(self)
 
         self.level_number = level_number
@@ -154,14 +152,13 @@ class Level_Manager(Game_Object):
         if self.time >= self.level_time:
             self.level_number += 1
             self.time = 0
-            level_text = "Level" + str(self.level_number)
             asteroid_side = 1
             asteroid_number = 20
 
             #set amount of asteroids
-            if self.level_number < 3:
+            if self.level_number <= 3:
                 asteroid_number = 20
-            elif (3 <= self.level_number < 5):
+            elif (3 < self.level_number <= 5):
                 asteroid_number = 30
             else:
                 self.asteroid_amount += 5
@@ -187,18 +184,16 @@ class Level_Manager(Game_Object):
             if asteroid_number != 0:
                 self.frequency = int(self.level_time)/int(asteroid_number)
 
-            self.current_level = Level(level_text = level_text, asteroid_side = asteroid_side, random = random, asteroid_number = asteroid_number)
+            self.current_level = Level(asteroid_side = asteroid_side, random = random, asteroid_number = asteroid_number)
 
         else:
             self.time += self.game_state.dt
-            self.level_text = ""
 
     def local_update(self):
         self.update_level()
 
 class Level():
-    def __init__(self, asteroid_number = 50, level_text = "", random = False, asteroid_side = 1, frequency = 0):
-        self.level_text = level_text
+    def __init__(self, asteroid_number = 50, random = False, asteroid_side = 1, frequency = 0):
         self.asteroid_number = asteroid_number
         self.frequency = frequency
         self.random = random
