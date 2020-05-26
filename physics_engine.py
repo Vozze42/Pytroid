@@ -284,18 +284,26 @@ class Render_Image():
                 rotated_image = pygame.transform.rotate(self.image, myround(math.degrees(-1*self.parent.physics_object.ang),1)) #-1 to convert from right handed to left handed
                 new_rect = rotated_image.get_rect(center = center)
 
-                screen.blit(rotated_image, new_rect)                
-'''
-class Sounds():
-    def __init__(self, filename="", parent=None):
-        self.filename = filename
-        self.parent = parent
+                screen.blit(rotated_image, new_rect)       
 
-    def play_sound(self):
-        pygame.mixer.init
-        pygame.mixer.music.load(self.filename)
-        pygame.mixer.music.play(loops=0)
-        pygame.mixer.quit
-'''
+class Ray():
+                           
+
+def play_sound(filename):
+    pygame.mixer.music.load(filename)
+    pygame.mixer.music.play(loops=0)
+    if filename == "fire.wav":
+        pygame.mixer.music.set_volume(0.4)
+    elif filename == "bangMedium.wav":
+        pygame.mixer.music.set_volume(0.3)
+    elif filename == "bangSmall.wav":
+        pygame.mixer.music.set_volume(0.3)
+    elif filename == "bangLarge.wav":
+        pygame.mixer.music.set_volume(0.3)
+    elif filename == "thrust.wav":
+        pygame.mixer.music.set_volume(0.05)
+    else:
+        pygame.mix.music.set_volume(0)
+
 def myround(x, base):
         return base * round(x/base)
