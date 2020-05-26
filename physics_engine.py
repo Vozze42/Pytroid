@@ -94,10 +94,14 @@ class Physics_Object:
         self.parent = parent
 
         self.forces = []
+        self.moments = []
         Physics_Manager.physics_objects.append(self)
 
     def add_force(self, force):
         self.forces.append(force)
+
+    def add_moment(self, moment):
+        self.moments.append(moment)
 
     def set_momentum(self, momentum):
         velocity_direction = self.vel / self.vel.mag()
@@ -110,12 +114,17 @@ class Physics_Object:
         self.vel += self.accel * dt
         self.pos += self.vel * dt
         self.accel = Vector2()
+
+        for moment in self.moments:
+            self.ang_accel += moment / self.moi
         self.ang_vel += self.ang_accel * dt
         self.ang += self.ang_vel * dt
 
         self.forces = []
+        self.moments = []
         self.accel = Vector2(0,0)
-        
+        self.ang_accel = 0
+
         while self.ang >= 2*math.pi:
             self.ang -= 2*math.pi
         while self.ang < 0:
@@ -272,10 +281,21 @@ class Render_Image():
             
             if self.parent.physics_object.ang != 0:
                 center = (coord[0], coord[1])
-                rotated_image = pygame.transform.rotate(self.image, myround(math.degrees(self.parent.physics_object.ang),1))
+                rotated_image = pygame.transform.rotate(self.image, myround(math.degrees(-1*self.parent.physics_object.ang),1)) #-1 to convert from right handed to left handed
                 new_rect = rotated_image.get_rect(center = center)
 
                 screen.blit(rotated_image, new_rect)                
+'''
+class Sounds():
+    def __init__(self, filename="", parent=None):
+        self.filename = filename
+        self.parent = parent
 
+    def play_sound(self):
+        pygame.mixer.init
+        pygame.mixer.music.load(self.filename)
+        pygame.mixer.music.play(loops=0)
+        pygame.mixer.quit
+'''
 def myround(x, base):
         return base * round(x/base)

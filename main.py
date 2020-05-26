@@ -57,35 +57,6 @@ class Game_State():
     def handle_event(self, event):
         if event.type == pg.KEYDOWN:
             key = event.key
-            if key == pg.K_SPACE:
-                self.player.weapon_manager.shoot_gun()
-            #control the spacecraft: TODO: Move to SpaceShip as function
-            if key == pg.K_q: #pushing q rotates 10 deg positive
-                if -0.0045 <= self.player.physics_object.ang_vel <=0.0045:
-                    self.player.physics_object.ang_vel += 0.0015
-            if key == pg.K_e: #pushing e rotates -10 deg, 0 deg aligned with x-axis
-                if -0.0045 <= self.player.physics_object.ang_vel <=0.0045:
-                    self.player.physics_object.ang_vel -= 0.0015
-            if key == pg.K_r: #possibility to set ang_vel to zero, remove if fly_by_wire!!!
-                self.player.physics_object.ang_vel = 0
-            if key == pg.K_f: #ossibility to set velocity to zero, remove if fly_by_wire!!!
-                self.player.physics_object.vel = Vector2(0,0)
-            if key == pg.K_d: #go forward
-                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang)
-                force_to_add = player_forward*1
-                self.player.physics_object.add_force(force_to_add)
-            if key == pg.K_a: #go backward
-                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang)
-                force_to_add = player_forward*-1
-                self.player.physics_object.add_force(force_to_add)
-            if key == pg.K_s: #go left
-                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang+0.5*math.pi)
-                force_to_add = player_forward*1
-                self.player.physics_object.add_force(force_to_add)
-            if key == pg.K_w: #go right
-                player_forward = Vector2().vector_from_angle(self.player.physics_object.ang+0.5*math.pi)
-                force_to_add = player_forward*-1
-                self.player.physics_object.add_force(force_to_add)
             #close the game
             if key == pg.K_ESCAPE:
                 running = False    
@@ -267,6 +238,8 @@ class Asteroid_Manager(Game_Object):
     def local_update(self):
         self.manage_asteroid_spawn()
 
+        return
+
 class Health_Manager(Game_Object):
     def __init__(self, hp = 3, parent = None):
         Game_Object.__init__(self)
@@ -328,6 +301,9 @@ class Asteroid(Game_Object):
         if isinstance(other, SpaceShip):
             if hasattr(other, "health_manager"):
                 other.health_manager.take_damage(self.asteroid_damage) 
+                pg.mixer.music.load("bangLarge.wav")
+                pg.mixer.music.play(loops=0)
+                pg.mixer.music.set_volume(0.1)
 
     def zero_hp(self):
         self.game_state.remove_game_object(self)
@@ -335,7 +311,7 @@ class Asteroid(Game_Object):
 
 
 class Weapon_Manager(Game_Object):
-    def __init__(self, gun_cooldown = 1, bullet_damage = 1, bullet_speed = 0.75, bullet_radius = 2):
+    def __init__(self, gun_cooldown = 100, bullet_damage = 1, bullet_speed = 0.75, bullet_radius = 2):
         Game_Object.__init__(self)
         self.parent = None
 
@@ -351,7 +327,7 @@ class Weapon_Manager(Game_Object):
         shooter_radius = shooter.rigid_body.radius
 
         if current_time - self.last_gunfire_time > self.gun_cooldown:
-            player_forward =  Vector2().vector_from_angle(-self.game_state.player.physics_object.ang)
+            player_forward =  Vector2().vector_from_angle(self.game_state.player.physics_object.ang)
             '''Refer to angle in radians of shooter here to fix angle of shooting!!!!!!!! ''' 
             bullet = Bullet(
             shooter = shooter, 
@@ -361,11 +337,14 @@ class Weapon_Manager(Game_Object):
             )
 
             bullet.physics_object.pos = shooter.physics_object.pos + player_forward * (shooter_radius + self.bullet_radius + 5) 
-            bullet.physics_object.vel = player_forward * self.bullet_speed
+            bullet.physics_object.vel = player_forward * self.bullet_speed + shooter.physics_object.vel
+            pg.mixer.music.load("fire.wav")
+            pg.mixer.music.play(loops=0)
+
             self.last_gunfire_time = pg.time.get_ticks()
 
 class Bullet(Game_Object):
-    def __init__(self, physics_object=None, rigid_body = None, bullet_damage = 1, shooter = None, render_circle = None):
+    def __init__(self, physics_object=None, rigid_body=None, bullet_damage = 1, shooter = None, render_circle = None):
         Game_Object.__init__(self)
 
         if physics_object == None:
@@ -406,13 +385,156 @@ class Bullet(Game_Object):
             other.health_manager.take_damage(self.bullet_damage) 
             self.game_state.asteroids_broken += 1
             self.game_state.points_total += 1
+            pg.mixer.music.load("bangSmall.wav")
+            pg.mixer.music.play(loops=0)
+            pg.mixer.music.set_volume(0.1)
         self.game_state.remove_game_object(self)
 
     def local_update(self):
         self.out_of_bounds()
 
+class Player_Controller(Game_Object):
+    def __init__(self, reference_frame = "global", control_mode = "coupled", rotation_mode = "zeroth", thrust_force = 1, rotation_moment = 1, rotation_speed = 0.05, correction_boost = 2): #control modes: coupled: speed and rotation compensated, assist: rotation compensated, decoupled: nothing compensated
+         Game_Object.__init__(self)
+
+         self.reference_frame = reference_frame
+         self.control_mode = control_mode
+         self.thrust_force = thrust_force
+         self.rotation_moment = rotation_moment
+         self.rotation_speed = rotation_speed
+         self.rotation_mode = rotation_mode
+         self.correction_boost = correction_boost
+         
+    def control(self):
+        keys = pg.key.get_pressed()
+        player = self.parent
+        player_physics = self.parent.physics_object
+
+        self.forward = False
+        self.back = False
+        self.right = False
+        self.left = False
+
+        self.rot_right = False
+        self.rot_left = False
+
+
+        if keys[pg.K_UP]:
+            player.weapon_manager.shoot_gun()
+        #control the spacecraft: 
+        if keys[pg.K_LEFT]: 
+            self.rot_left = True
+        
+        if keys[pg.K_RIGHT]: 
+            self.rot_right = True
+
+        if keys[pg.K_w]: #go forward
+            self.forward = True
+        
+        if keys[pg.K_s]: #go backward
+            self.back = True
+
+        if keys[pg.K_a]: #go left
+            self.left = True
+
+        if keys[pg.K_d]: #go right
+            self.right = True
+
+        if self.reference_frame == "local":
+            player_forward = Vector2().vector_from_angle(player_physics.ang)
+            if self.forward: #go forward
+                force_to_add = player_forward*self.thrust_force 
+                player_physics.add_force(force_to_add)
+            if self.back: #go backward
+                force_to_add = player_forward*-self.thrust_force 
+                player_physics.add_force(force_to_add)
+            if self.left: #go left
+                player_left = Vector2().vector_from_angle(player_physics.ang-0.5*math.pi)
+                force_to_add = player_left*self.thrust_force 
+                player_physics.add_force(force_to_add)
+            if self.right: #go right
+                player_right = Vector2().vector_from_angle(player_physics.ang+0.5*math.pi)
+                force_to_add = player_right*self.thrust_force 
+                player_physics.add_force(force_to_add)
+
+        if self.reference_frame == "global":
+            if self.forward: #go forward = up
+                force_to_add = Vector2(0, -1)*self.thrust_force 
+                player_physics.add_force(force_to_add)
+            if self.back: #go backward
+                force_to_add = Vector2(0, 1)*self.thrust_force 
+                player_physics.add_force(force_to_add)
+            if self.left: #go left
+                force_to_add = Vector2(-1,0)*self.thrust_force 
+                player_physics.add_force(force_to_add)
+            if self.right: #go right
+                force_to_add = Vector2(1,0)*self.thrust_force 
+                player_physics.add_force(force_to_add)
+
+        if self.rotation_mode == "zeroth":
+            if self.rot_left:
+                player_physics.ang += -1*self.rotation_speed
+            if self.rot_right:
+                player_physics.ang += self.rotation_speed
+
+        if self.rotation_mode == "first":
+            if self.rot_left:
+                player_physics.add_moment(self.rotation_moment)
+            if self.rot_right:
+                player_physics.add_moment(-1*self.rotation_moment)
+
+    def fly_by_wire_speed(self):
+        player = self.parent
+        player_physics = self.parent.physics_object
+        
+        if not self.forward and player_physics.vel.y > 0: #go forward = up
+            force_to_add = Vector2(0, 1)*min(abs(self.thrust_force*self.correction_boost*player_physics.vel.y), self.thrust_force*self.correction_boost)*-1 
+            player_physics.add_force(force_to_add)
+        if not self.back and player_physics.vel.y < 0: #go backward
+            force_to_add = Vector2(0, -1)*min(abs(self.thrust_force*self.correction_boost*player_physics.vel.y), self.thrust_force*self.correction_boost)*-1 
+            player_physics.add_force(force_to_add)
+        if not self.left and player_physics.vel.x < 0: #go left
+            force_to_add = Vector2(-1,0)*min(abs(self.thrust_force*self.correction_boost*player_physics.vel.x), self.thrust_force*self.correction_boost)*-1 
+            player_physics.add_force(force_to_add)
+        if not self.right and player_physics.vel.x > 0: #go right
+            force_to_add = Vector2(1,0)*min(abs(self.thrust_force*self.correction_boost*player_physics.vel.x), self.thrust_force*self.correction_boost)*-1 
+            player_physics.add_force(force_to_add)
+        """
+        if self.reference_frame == "local":
+            player_forward = Vector2().vector_from_angle(player_physics.ang)
+            if not self.forward: #go forward
+                force_to_add = player_forward*self.thrust_force*self.correction_boost*-1
+                player_physics.add_force(force_to_add)
+            if not self.back: #go backward
+                force_to_add = player_forward*-self.thrust_force*self.correction_boost*-1
+                player_physics.add_force(force_to_add)
+            if not self.left: #go left
+                player_left = Vector2().vector_from_angle(player_physics.ang-0.5*math.pi)
+                force_to_add = player_left*self.thrust_force*self.correction_boost*-1 
+                player_physics.add_force(force_to_add)
+            if not self.right: #go right
+                player_right = Vector2().vector_from_angle(player_physics.ang+0.5*math.pi)
+                force_to_add = player_right*self.thrust_force*self.correction_boost*-1
+                player_physics.add_force(force_to_add)
+        """
+        return
+    def fly_by_wire_rotation(self):
+        return
+
+
+    def local_update(self):
+        self.control()
+
+        if self.control_mode == "coupled":
+            self.fly_by_wire_speed()
+            self.fly_by_wire_rotation()
+        if self.control_mode == "assist":
+            self.fly_by_wire_rotation()
+
+
+
 class SpaceShip(Game_Object):
-    def __init__(self, physics_object = None, rigid_body = None, weapon_manager = None, health_manager = None, render_image = None):
+    def __init__(self, physics_object = None, rigid_body = None, weapon_manager = None, health_manager = None, render_image = None, player_controller = None):
         Game_Object.__init__(self)
 
         if physics_object == None:
@@ -450,6 +572,13 @@ class SpaceShip(Game_Object):
             self.render_image = render_image
             self.render_image.parent = self
 
+        if player_controller == None:
+            self.player_controller = Player_Controller()
+            self.player_controller.parent = self
+        else:
+            self.player_controller = render_image
+            self.player_controller.parent = self
+
     def out_of_bounds(self):
         radius = self.rigid_body.radius
         widthscreen = self.game_state.widthscreen
@@ -479,6 +608,9 @@ class SpaceShip(Game_Object):
         if isinstance(other, Asteroid):
             if hasattr(other, "health_manager"):
                 self.game_state.remove_game_object(other)
+                pg.mixer.music.load("bangLarge.wav")
+                pg.mixer.music.play(loops=0)
+
 
     def local_update(self):
         self.out_of_bounds()
