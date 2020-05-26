@@ -9,6 +9,7 @@ Created on Fri May 22 16:13:39 2020
 import math
 import pygame
 import random
+import os
 
 class Vector2:
     def __init__(self, x = 0, y = 0):
@@ -241,9 +242,14 @@ class Physics_Manager():
         self.update_collisions()
         self.draw_bodies()
         return
+    '''
+    def cast_ray(self, start_pos, dir):
+        for Rigid_Body in self.rigid_bodies:
+            if 
+    ''' 
 
 class Render_Circle():
-    def __init__(self, radius = 1, color = (255,255,255), parent = None):
+    def __init__(self, radius = 0, color = (255,255,255), parent = None):
         self.radius = radius
         self.color = color
         self.parent = parent
@@ -258,17 +264,35 @@ class Render_Circle():
             pygame.draw.circle(screen, self.color, coord, int(self.radius))
 
 class Render_Image():
-    def __init__(self, image = "", parent = None):
-        self.image_file = image
-        self.image_rotate = pygame.image.load(self.image_file)
-        self.image = pygame.image.load(self.image_file)
-        self.image = pygame.transform.rotozoom(self.image, -90, 0.1)
+    def __init__(self, image, size = None, scalar_size= None, ang = None, parent = None):
+        self.image = image
+        if size != None:
+            self.image = self.scale_image(size)
+        if ang != None:
+            self.image = self.rotate_image(ang) 
+        if scalar_size != None:
+            self.image = self.scalar_scale_image(scalar_size)
+        self.size = size
         self.image_for_angle = []
         
-        for angle in range(0,400,10):
-            self.image_for_angle.append(pygame.transform.rotozoom(self.image_rotate, angle-90, 0.1))
+        #for angle in range(0,400,10):
+        #    self.image_for_angle.append(pygame.transform.rotozoom(self.image_rotate, angle-90, 0.1))
         
         Physics_Manager.render_images.append(self)
+
+    def scalar_scale_image(self, scalar_size):
+        current_size = self.image.get_rect().size
+        new_size = (int(current_size[0] * scalar_size), int(current_size[1] * scalar_size))
+        image = pygame.transform.scale(self.image, new_size)
+        return image
+
+    def scale_image(self, size):
+        image = pygame.transform.scale(self.image, size)
+        return image
+
+    def rotate_image(self, rot_ang):
+        image = pygame.transform.rotate(self.image, myround(math.degrees(-1*rot_ang),1)) #-1 to convert from right handed to left handed
+        return image
 
     def render_img(self, screen):
         if self.parent != None:
@@ -284,10 +308,30 @@ class Render_Image():
                 rotated_image = pygame.transform.rotate(self.image, myround(math.degrees(-1*self.parent.physics_object.ang),1)) #-1 to convert from right handed to left handed
                 new_rect = rotated_image.get_rect(center = center)
 
-                screen.blit(rotated_image, new_rect)       
+                screen.blit(rotated_image, new_rect)
 
-class Ray():
-                           
+class Image_Manager():
+    def __init__(self, image_folder = "", asteroid_path = ""):
+        self.image_folder = image_folder
+        self.asteroid_path = asteroid_path
+        self.prepare_images()
+
+    def get_and_convert_images(self, path):
+        images = {}
+        files = os.listdir(path)
+        for file in files:
+            joint_path = os.path.join(path, file)
+            if os.path.isfile(os.path.join(path, file)):
+                image = pygame.image.load(joint_path).convert_alpha()
+                images[file] = image
+
+        return images
+
+    def prepare_images(self):
+        self.images = self.get_and_convert_images(self.image_folder)
+        self.asteroids = self.get_and_convert_images(self.asteroid_path)
+        
+         
 
 def play_sound(filename):
     pygame.mixer.music.load(filename)

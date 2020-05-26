@@ -6,7 +6,7 @@
 
 import pygame as pg
 import physics_engine as pe
-from physics_engine import Physics_Manager, Physics_Object, Rigid_Body, Vector2, Render_Image, Render_Circle, play_sound
+from physics_engine import Physics_Manager, Physics_Object, Rigid_Body, Vector2, Render_Image, Render_Circle, play_sound, Image_Manager
 import random as rd
 import math
 import os
@@ -33,19 +33,20 @@ class Game_State():
         self.physics_manager = Physics_Manager(self.screen)
         self.level_manager = Level_Manager()
         self.asteroid_manager = Asteroid_Manager()
+        self.image_manager = Image_Manager(image_folder= "./images", asteroid_path = "./images/asteroids")
 
         self.player = SpaceShip(
         physics_object = Physics_Object(mass = 1000, pos = Vector2(self.widthscreen/2,self.heightscreen/2), ang = -math.pi/2, moi = 100000), 
         rigid_body = Rigid_Body(radius = 25), 
         health_manager = Health_Manager(hp=500), 
-        render_image=Render_Image("SpaceShip.png")
+        render_image=Render_Image(self.image_manager.images["Spaceship.png"], scalar_size = 0.1, ang = math.pi/2)
         )
 
         self.points_total = 0
         
         self.stats = Text_Stats()
 
-        self.background_image = pg.image.load("Andromeda.png").convert()
+        self.background_image = self.image_manager.images["Andromeda.png"]
         self.the_image = pg.transform.scale(self.background_image, (self.widthscreen,self.heightscreen))
 
     def init_pygame(self):
@@ -79,12 +80,12 @@ class Game_State():
 
     def game_over(self):
         self.points_total = 0
-        self.player.health_manager.hp = 500
-        '''
-        for game_object in self.game_objects:
-            self.remove_game_object(game_object)
-        '''
-        self.player.vel = Vector2(0,0)
+        self.player = SpaceShip(
+        physics_object = Physics_Object(mass = 1000, pos = Vector2(self.widthscreen/2,self.heightscreen/2), ang = -math.pi/2, moi = 100000), 
+        rigid_body = Rigid_Body(radius = 25), 
+        health_manager = Health_Manager(hp=500), 
+        render_image=Render_Image(self.image_manager.images["Spaceship.png"], scalar_size = 0.1, ang = math.pi/2)
+        )
         self.asteroids_broken = 0
         self.level_manager.level_number = 1
         self.level_manager.time = 0
@@ -189,13 +190,14 @@ class Asteroid_Manager(Game_Object):
         self.asteroid_index = 1
 
     def asteroidGenerator(self, number_ast, waveprop, random): #set constant initially, increase if wave functionality added
+        
         if random == True:
             angle = math.radians(rd.randint(-40, 40)) #angle between x and y component velocity
         else:
             angle = 0   
-        mass = rd.randint(80, 110) #avg mass of 80 kg assumed
+        mass = rd.randint(40, 250) #avg mass of 80 kg assumed
         radius = int(mass/4) #with average mass 80, radius average asteroid 20 pixels
-        vel_int = rd.randint(10,20)/mass #standard total momentum of 400 , avg 50 velocity in pixel/second,
+        vel_int = rd.randint(15,30)/mass #standard total momentum of 400 , avg 50 velocity in pixel/second,
 
         widthscreen = self.game_state.widthscreen
         heightscreen = self.game_state.heightscreen
@@ -228,14 +230,15 @@ class Asteroid_Manager(Game_Object):
                 vel = Vector2(vel_int*math.sin(abs(angle)), -vel_int*math.cos(angle)) #downward, positive y
             else:
                 vel = Vector2(-vel_int*math.sin(abs(angle)), -vel_int*math.cos(angle))
-        colors = [(220,220,220), (192,192,192), (169,169,169), (119,136,153), (47,79,79)]
-        
+
+        image = rd.choice(list(self.game_state.image_manager.asteroids.values()))
+        size = (int(radius * 2 *1.4), int(radius * 2 *1.4))
         current_asteroid = Asteroid(
         physics_object = Physics_Object(mass = mass, pos = pos, vel = vel), 
-        rigid_body =  Rigid_Body(radius=radius), render_circle= Render_Circle(radius=radius, color=colors[rd.randint(0,4)]), 
-        health_manager =  Health_Manager(hp=mass/60)
-        )
-
+        rigid_body =  Rigid_Body(radius=radius), 
+        render_image = Render_Image(image, size = size), 
+        health_manager =  Health_Manager(hp=mass/60))
+        
         return current_asteroid
 
     def remove_asteroid(self, asteroid):
@@ -273,7 +276,7 @@ class Health_Manager(Game_Object):
                 self.zero_hp_called = True
 
 class Asteroid(Game_Object):
-    def __init__(self, asteroid_damage = 100, physics_object = None, rigid_body = None, health_manager = None, render_circle = None):
+    def __init__(self, asteroid_damage = 100, physics_object = None, rigid_body = None, health_manager = None, render_image = None):
         Game_Object.__init__(self)
 
         if physics_object == None:
@@ -296,14 +299,14 @@ class Asteroid(Game_Object):
         else:
             self.health_manager = health_manager
             self.health_manager.parent = self
-
-        if render_circle == None:
-            self.render_circle = Render_Circle()
-            self.render_circle.parent = self
+        
+        if render_image == None:
+            self.render_image = Render_Image()
+            self.render_image.parent = self
         else:
-            self.render_circle = render_circle
-            self.render_circle.parent = self
-
+            self.render_image = render_image
+            self.render_image.parent = self
+            
         self.asteroid_damage = asteroid_damage
 
     def local_update(self):
@@ -501,8 +504,6 @@ class Player_Controller(Game_Object):
                 player_physics.add_moment(-1*self.rotation_moment)
             if self.rot_right:
                 player_physics.add_moment(self.rotation_moment)
-
-        print(player_physics.ang)
 
     def fly_by_wire_speed(self):
         player = self.parent
