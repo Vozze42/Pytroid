@@ -146,6 +146,7 @@ class Level_Manager(Game_Object):
 
         self.time = 0
         self.asteroid_amount = 20
+        self.enemies_amount = 0
 
         self.current_level = Level()
 
@@ -165,6 +166,9 @@ class Level_Manager(Game_Object):
             else:
                 self.asteroid_amount += 5
                 asteroid_number = self.asteroid_amount
+                if self.enemies_amount < 2:
+                    self.game_state.enemy = Enemy()
+                    self.enemies_amount =+ 1
 
             #set direction of asteroids
             if self.level_number < 3:
@@ -366,7 +370,7 @@ class Weapon_Manager(Game_Object):
         shooter_radius = shooter.rigid_body.radius
 
         if current_time - self.last_gunfire_time > self.gun_cooldown:
-            player_forward =  Vector2().vector_from_angle(self.game_state.player.physics_object.ang)
+            player_forward =  self.parent.point_gun()
             '''Refer to angle in radians of shooter here to fix angle of shooting!!!!!!!! ''' 
             bullet = Bullet(
             shooter = shooter, 
@@ -665,9 +669,8 @@ class SpaceShip(Game_Object):
                 play_sound("./sounds/bangLarge.wav")
 
     def point_gun(self):
-        vector = Vector2(math.cos(self.physics_object.ang),math.sin(self.physics_object.ang))
-        return vector
-        
+        gun_vector = Vector2(math.cos(self.physics_object.ang), math.sin(self.physics_object.ang))
+        return gun_vector
 
     def local_update(self):
         self.out_of_bounds()
@@ -708,7 +711,7 @@ class Enemy(Game_Object):
         Game_Object.__init__(self)
 
         if physics_object == None:
-            self.physics_object = Physics_Object(mass = 100, pos = Vector2(self.game_state.widthscreen/3,self.game_state.heightscreen/3), ang = -math.pi/2, moi = 100000)
+            self.physics_object = Physics_Object(mass = 100, pos = Vector2(self.game_state.widthscreen/(randint(0,6)),self.game_state.heightscreen/(randint(0,6)), ang = -math.pi/2, moi = 100000)
             self.physics_object.parent = self
         else:
             self.physics_object = physics_object
@@ -765,6 +768,7 @@ class Enemy(Game_Object):
 
     def zero_hp(self):
         self.game_state.remove_game_object(self)
+        self.game_state.level_manager.enemies_amount -= 1
         
     def point_gun(self):
         base_vector = self.game_state.player.physics_object.pos - self.physics_object.pos
@@ -793,6 +797,9 @@ class Enemy(Game_Object):
             if hasattr(other, "health_manager"):
                 other.health_manager.zero_hp()
                 play_sound("./sounds/bangLarge.wav")
+    
+    def shoot_at_player(self):
+        self.weapon_manager.shoot_gun()
 
     def local_update(self):
         self.shoot_at_player()
