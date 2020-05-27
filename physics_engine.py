@@ -330,21 +330,20 @@ class Image_Manager():
     def prepare_images(self):
         self.images = self.get_and_convert_images(self.image_folder)
         self.asteroids = self.get_and_convert_images(self.asteroid_path)
-        
-         
 
-def play_sound(filename):
-    pygame.mixer.music.load(filename)
+
+def play_sound(filepath):
+    pygame.mixer.music.load(filepath)
     pygame.mixer.music.play(loops=0)
-    if filename == "fire.wav":
+    if filepath == "./sounds/fire.wav":
         pygame.mixer.music.set_volume(0.4)
-    elif filename == "bangMedium.wav":
+    elif filepath == "./sounds/bangMedium.wav":
         pygame.mixer.music.set_volume(0.3)
-    elif filename == "bangSmall.wav":
+    elif filepath == "./sounds/bangSmall.wav":
         pygame.mixer.music.set_volume(0.3)
-    elif filename == "bangLarge.wav":
+    elif filepath == "./sounds/bangLarge.wav":
         pygame.mixer.music.set_volume(0.3)
-    elif filename == "thrust.wav":
+    elif filepath == "./sounds/thrust.wav":
         pygame.mixer.music.set_volume(0.05)
     else:
         pygame.mix.music.set_volume(0)
