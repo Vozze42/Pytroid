@@ -665,6 +665,8 @@ class SpaceShip(Game_Object):
                 play_sound("./sounds/bangLarge.wav")
 
     def point_gun(self):
+        vector = Vector2(math.cos(self.physics_object.ang),math.sin(self.physics_object.ang))
+        return vector
         
 
     def local_update(self):
