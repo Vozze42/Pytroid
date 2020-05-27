@@ -366,7 +366,7 @@ class Weapon_Manager(Game_Object):
         shooter_radius = shooter.rigid_body.radius
 
         if current_time - self.last_gunfire_time > self.gun_cooldown:
-            player_forward =  Vector2().vector_from_angle(self.game_state.player.physics_object.ang)
+            player_forward =  self.parent.point_gun()
             '''Refer to angle in radians of shooter here to fix angle of shooting!!!!!!!! ''' 
             bullet = Bullet(
             shooter = shooter, 
@@ -665,7 +665,8 @@ class SpaceShip(Game_Object):
                 play_sound("./sounds/bangLarge.wav")
 
     def point_gun(self):
-        
+        gun_vector = Vector2(math.cos(self.physics_object.ang), math.sin(self.physics_object.ang))
+        return gun_vector
 
     def local_update(self):
         self.out_of_bounds()
@@ -791,6 +792,9 @@ class Enemy(Game_Object):
             if hasattr(other, "health_manager"):
                 other.health_manager.zero_hp()
                 play_sound("./sounds/bangLarge.wav")
+    
+    def shoot_at_player(self):
+        self.weapon_manager.shoot_gun()
 
     def local_update(self):
         self.shoot_at_player()
