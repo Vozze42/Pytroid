@@ -377,7 +377,6 @@ class Weapon_Manager(Game_Object):
 
             bullet.physics_object.pos = shooter.physics_object.pos + player_forward * (shooter_radius + self.bullet_radius + 5) 
             bullet.physics_object.vel = player_forward * self.bullet_speed + shooter.physics_object.vel
-            play_sound("./sounds/fire.wav")
 
             self.last_gunfire_time = pg.time.get_ticks()
 
@@ -456,6 +455,7 @@ class Player_Controller(Game_Object):
 
         if keys[pg.K_SPACE]:
             player.weapon_manager.shoot_gun()
+            play_sound("./sounds/fire.wav")
         #control the spacecraft: 
         if keys[pg.K_LEFT]: 
             self.rot_left = True
@@ -664,6 +664,9 @@ class SpaceShip(Game_Object):
                 other.zero_hp()
                 play_sound("./sounds/bangLarge.wav")
 
+    def point_gun(self):
+        
+
     def local_update(self):
         self.out_of_bounds()
 
@@ -697,52 +700,45 @@ class Text_Stats(Game_Object):
 
     def local_update(self):
         self.update_text()
-'''
-class Enemy():
-    def __init__(self, physics_object = None, rigid_body = None, weapon_manager = None, health_manager = None, render_image = None, player_controller = None):
+
+class Enemy(Game_Object):
+    def __init__(self, physics_object = None, rigid_body = None, weapon_manager = None, health_manager = None, render_image = None):
         Game_Object.__init__(self)
 
         if physics_object == None:
-            self.physics_object = Physics_Object()
+            self.physics_object = Physics_Object(mass = 100, pos = Vector2(self.game_state.widthscreen/3,self.game_state.heightscreen/3), ang = -math.pi/2, moi = 100000)
             self.physics_object.parent = self
         else:
             self.physics_object = physics_object
             self.physics_object.parent = self
 
         if rigid_body == None:
-            self.rigid_body = Rigid_Body()
+            self.rigid_body = Rigid_Body(radius = 25)
             self.rigid_body.parent = self
         else:
             self.rigid_body = rigid_body
             self.rigid_body.parent = self
         
         if health_manager == None:
-            self.health_manager = Health_Manager()
+            self.health_manager = Health_Manager(hp=500)
             self.health_manager.parent = self
         else:
             self.health_manager = health_manager
             self.health_manager.parent = self
+        
+        if render_image == None:
+            self.render_image=Render_Image(self.game_state.image_manager.images["enemy.png"], scalar_size = 0.1, ang = math.pi/2) 
+            self.render_image.parent = self
+        else:
+            self.render_image = render_image
+            self.render_image.parent = self    
 
         if weapon_manager == None:
-            self.weapon_manager = Weapon_Manager()
+            self.weapon_manager = Weapon_Manager(gun_cooldown = 500, bullet_damage = 1.5, bullet_speed = 0.75, bullet_radius = 2)
             self.weapon_manager.parent = self
         else:
             self.weapon_manager = weapon_manager
             self.weapon_manager.parent = self
-
-        if render_image == None:
-            self.render_image = Render_Image()
-            self.render_image.parent = self
-        else:
-            self.render_image = render_image
-            self.render_image.parent = self
-
-        if player_controller == None:
-            self.player_controller = Player_Controller()
-            self.player_controller.parent = self
-        else:
-            self.player_controller = render_image
-            self.player_controller.parent = self
 
     def out_of_bounds(self):
         radius = self.rigid_body.radius
@@ -751,7 +747,6 @@ class Enemy():
 
         inverse_x = Vector2(-1, 1)
         inverse_y = Vector2(1, -1)
-        test = self.physics_object.vel * inverse_x
         coord = self.physics_object.pos.unpack()
         if coord[0] < 0 + radius:
             self.physics_object.pos = Vector2(0 + radius, coord[1])
@@ -767,15 +762,40 @@ class Enemy():
             self.physics_object.vel = self.physics_object.vel.pseudo_cross(inverse_y)
 
     def zero_hp(self):
-        self.g
+        self.game_state.remove_game_object(self)
+        
+    def point_gun(self):
+        base_vector = self.game_state.player.physics_object.pos - self.physics_object.pos
+        time_to_player = Vector2.mag(base_vector)/0.75 #0.75 = bulletspeed
+        #shooting_vector = base_vector/Vector2.mag(base_vector)
+        next_player_position = self.game_state.player.physics_object.pos + time_to_player*self.game_state.player.physics_object.vel + 0.5*self.game_state.player.physics_object.accel*time_to_player**2-self.physics_object.vel*time_to_player -self.physics_object.pos
+        shooting_vector_one = next_player_position/Vector2.mag(next_player_position)
+        return shooting_vector_one
+
+    def control_speed(self):
+        speed_vector = self.physics_object.vel
+        speed_mag = Vector2.mag(speed_vector)
+        if speed_mag > 1:
+            speed_vector -= 0.2*speed_vector
+        if 0.2 <= speed_mag <= 1:
+            speed_vector += Vector2(rd.uniform(-0.2,0.2), rd.uniform(-0.2,0.2))
+        if speed_mag < 0.2:
+            speed_vector += 0.2*speed_vector
+        self.physics_object.vel = speed_vector
 
     def on_collision(self, other):
         if isinstance(other, Asteroid):
             if hasattr(other, "health_manager"):
-                self.game_state.remove_game_object(other)
-                play_sound("bangLarge.wav")
+                play_sound("./sounds/bangLarge.wav")
+        if isinstance(other, SpaceShip):
+            if hasattr(other, "health_manager"):
+                other.health_manager.zero_hp()
+                play_sound("./sounds/bangLarge.wav")
 
     def local_update(self):
-        self.out_of_bounds() '''
+        self.shoot_at_player()
+        self.out_of_bounds()
+        self.control_speed()
+
 game_state = Game_State()
 game_state.update()

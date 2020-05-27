@@ -778,13 +778,22 @@ class Enemy(Game_Object):
     def point_gun(self):
         base_vector = self.game_state.player.physics_object.pos - self.physics_object.pos
         time_to_player = Vector2.mag(base_vector)/0.75 #0.75 = bulletspeed
-        shooting_vector = base_vector/Vector2.mag(base_vector)
-        orthogonal = ((shooting_vector.dot(self.physics_object.vel))/shooting_vector.dot(shooting_vector)) * shooting_vector
-        drift = orthogonal*time_to_player
+        #shooting_vector = base_vector/Vector2.mag(base_vector)
         next_player_position = self.game_state.player.physics_object.pos + time_to_player*self.game_state.player.physics_object.vel + 0.5*self.game_state.player.physics_object.accel*time_to_player**2-self.physics_object.vel*time_to_player -self.physics_object.pos
         shooting_vector_one = next_player_position/Vector2.mag(next_player_position)
         return shooting_vector_one
-    
+
+    def control_speed(self):
+        speed_vector = self.physics_object.vel
+        speed_mag = Vector2.mag(speed_vector)
+        if speed_mag > 1:
+            speed_vector -= 0.2*speed_vector
+        if 0.2 <= speed_mag <= 1:
+            speed_vector += Vector2(rd.uniform(-0.2,0.2), rd.uniform(-0.2,0.2))
+        if speed_mag < 0.2:
+            speed_vector += 0.2*speed_vector
+        self.physics_object.vel = speed_vector
+
     def on_collision(self, other):
         if isinstance(other, Asteroid):
             if hasattr(other, "health_manager"):
@@ -797,6 +806,7 @@ class Enemy(Game_Object):
     def local_update(self):
         self.shoot_at_player()
         self.out_of_bounds()
+        self.control_speed()
 
 game_state = Game_State()
 game_state.update()
