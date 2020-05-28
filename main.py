@@ -345,6 +345,9 @@ class Health_Manager(Game_Object):
     def take_damage(self, damage):
         self.hp -= int(damage)
 
+        if hasattr(self.parent, "health_update"):
+            self.parent.health_update()
+
         if self.hp <= 0:
             if hasattr(self.parent, "zero_hp"):
                 self.parent.zero_hp()
@@ -840,5 +843,13 @@ class Enemy(Game_Object):
         self.shoot_at_player()
         self.out_of_bounds()
         self.control_speed()
+
+class Bar(Game_Object):
+    def init(self, size, position, background_color = (150,0,0), bar_color = (255,0,0)):
+        return
+
+    def update_bar():
+        return
+
 
 game_state = Game_State()
