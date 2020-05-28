@@ -665,7 +665,7 @@ class SpaceShip(Game_Object):
                 play_sound("./sounds/bangLarge.wav")
 
     def point_gun(self):
-        
+
 
     def local_update(self):
         self.out_of_bounds()
