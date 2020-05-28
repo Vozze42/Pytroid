@@ -152,6 +152,19 @@ class Game_State():
 
             pg.display.flip()
 
+class Text_Manager():
+    def draw_text(self,text, size, color, position, middle):
+        text = str(text)
+
+        default_font = pg.font.get_default_font()
+        self.font = pg.font.Font(default_font, size)
+
+        textsurface = self.font.render(text, False, color)
+        if middle:
+            offset = textsurface.get_size()
+            position = (position[0] - offset[0] / 2, position[1] - offset[1] / 2)
+
+        self.game_state.screen.blit(textsurface, position)
 
 class Game_Object():
     game_state = None
@@ -440,6 +453,14 @@ class Weapon_Manager(Game_Object):
 
             self.last_gunfire_time = pg.time.get_ticks()
 
+    def select_target(self):
+        distance_list = []
+        for asteroid in self.game_state.asteroids_manager.asteroid:
+            distance = Vector2.mag(self.game_state.player.physics_object.pos - asteroid.physics_object.pos)
+            distance_list.append(distance)
+        
+        return
+
 class Bullet(Game_Object):
     def __init__(self, physics_object=None, rigid_body=None, bullet_damage = 1, shooter = None, render_circle = None):
         Game_Object.__init__(self)
@@ -718,27 +739,14 @@ class Text_Stats(Game_Object):
 
         self.x = x
         self.y = y
-
-    def draw_text(self,text, size, color, position, middle):
-        text = str(text)
-
-        default_font = pg.font.get_default_font()
-        self.font = pg.font.Font(default_font, size)
-
-        textsurface = self.font.render(text, False, color)
-        if middle:
-            offset = textsurface.get_size()
-            position = (position[0] - offset[0] / 2, position[1] - offset[1] / 2)
-
-        self.game_state.screen.blit(textsurface, position)
     
     def update_text(self):
         WHITE = (255,255,255)
 
-        self.draw_text("Level: "+str(self.game_state.level_manager.level_number), 40, WHITE, (4, 0), False)
-        self.draw_text("Health: "+str(self.game_state.player.health_manager.hp), 40, WHITE, (4, 40), False)
-        self.draw_text("Points total: "+str(self.game_state.points_total), 40, WHITE, (4, 80), False)
-        self.draw_text("Asteroids broken: "+str(self.game_state.asteroids_broken), 40, WHITE, (4, 120), False)
+        Text_Manager.draw_text("Level: "+str(self.game_state.level_manager.level_number), 40, WHITE, (4, 0), False)
+        Text_Manager.draw_text("Health: "+str(self.game_state.player.health_manager.hp), 40, WHITE, (4, 40), False)
+        Text_Manager.draw_text("Points total: "+str(self.game_state.points_total), 40, WHITE, (4, 80), False)
+        Text_Manager.draw_text("Asteroids broken: "+str(self.game_state.asteroids_broken), 40, WHITE, (4, 120), False)
 
     def local_update(self):
         self.update_text()
@@ -845,20 +853,71 @@ class Enemy(Game_Object):
         self.control_speed()
 
 class Missile():
-    def __init__(self, physics_object = None, rigid_body = None, weapon_manager = None, health_manager = None, render_image = None):
+    def __init__(self, physics_object=None, rigid_body=None, bullet_damage = 1, shooter = None, render_image = None):
         Game_Object.__init__(self)
+        
+        if self.physics_object == None:
+            self.physics_object = Physics_Object()
+            self.physics_object.parent = self
+        else:
+            self.physics_object = physics_object
+            self.physics_object.parent = self
+        
+        if self.rigid_body == None:
+            self.rigid_body = Rigid_Body()
+            self.rigid_body.parent = self
+        else:
+            self.rigid_body = rigid_body
+            self.rigid_body.parent = self
+
+        if self.render_image == None:
+            self.render_image = Render_Image()
+            self.render_image.parent = self
+        else:
+            self.render_image = render_image
+            self.render_image.parent = self
+        
 
     def steer_to_target(self):
-
+        return
+        
 
     def local_update(self):
+        return
 
 class Bar(Game_Object):
-    def init(self, size, position, background_color = (150,0,0), bar_color = (255,0,0)):
+    def init(self, size, position, percentage = 1,  background_color = (150,0,0), bar_color = (255,0,0)):
+        Game_Object.__init__(self)
+
+        self.size = size
+        self.position = position
+        self.background_color = background_color
+        self.bar_color = bar_color
+
+        self.bar = pg.Rect(int(position[0]), int(position[1]),  int(size[1]),  int(size[1]))
+        self.background = pg.Rect(int(position[0]), int(position[1]),  int(size[1]),  int(size[1]))
         return
 
-    def update_bar():
+    def update_bar(self, percentage, number = None, position = None, background_color = None, bar_color = None):
+        if position != None:
+            self.position = position
+        if background_color != None:
+            self.background_color = background_color
+        if bar_color != None:
+            self.bar_color = bar_color
+        
+        new_size = size[0]/percentage
+        self.size = (new_size, self.size[1])
+            
         return
+    
+    def local_update(self):
+        self.draw_bar()
+
+    def draw_bar(self):
+        pg.draw.rect(self.game_state.screen, self.bar_color, self.bar)
+        pg.draw.rect(self.game_state.screen, self.background_color, self.background)
+        
 
 
 game_state = Game_State()
