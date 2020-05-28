@@ -844,6 +844,15 @@ class Enemy(Game_Object):
         self.out_of_bounds()
         self.control_speed()
 
+class Missile():
+    def __init__(self, physics_object = None, rigid_body = None, weapon_manager = None, health_manager = None, render_image = None):
+        Game_Object.__init__(self)
+
+    def steer_to_target(self):
+
+
+    def local_update(self):
+
 class Bar(Game_Object):
     def init(self, size, position, background_color = (150,0,0), bar_color = (255,0,0)):
         return
