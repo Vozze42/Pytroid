@@ -287,7 +287,7 @@ class Render_Image():
         return image
 
     def scale_image(self, size):
-        image = pygame.transform.scale(self.image, size)
+        image = pygame.transform.scale(self.image, (int(size[0]), int(size[1])))
         return image
 
     def rotate_image(self, rot_ang):
@@ -333,20 +333,18 @@ class Image_Manager():
 
 
 def play_sound(filepath):
-    pygame.mixer.music.load(filepath)
-    pygame.mixer.music.play(loops=0)
+    sound = pygame.mixer.Sound(filepath)
     if filepath == "./sounds/fire.wav":
-        pygame.mixer.music.set_volume(0.4)
+        pygame.mixer.Channel(0).play(pygame.mixer.Sound(filepath))
     elif filepath == "./sounds/bangMedium.wav":
-        pygame.mixer.music.set_volume(0.3)
+        pygame.mixer.Channel(1).play(pygame.mixer.Sound(filepath))
     elif filepath == "./sounds/bangSmall.wav":
-        pygame.mixer.music.set_volume(0.3)
+        pygame.mixer.Channel(2).play(pygame.mixer.Sound(filepath))
     elif filepath == "./sounds/bangLarge.wav":
-        pygame.mixer.music.set_volume(0.3)
-    elif filepath == "./sounds/thrust.wav":
-        pygame.mixer.music.set_volume(0.05)
-    else:
-        pygame.mix.music.set_volume(0)
+        pygame.mixer.Channel(3).play(pygame.mixer.Sound(filepath))
+    if filepath == "./sounds/thrust.wav":
+        pygame.mixer.Channel(4).play(pygame.mixer.Sound(filepath))
+        sound.set_volume(0.16)
 
 def myround(x, base):
         return base * round(x/base)
