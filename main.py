@@ -711,7 +711,7 @@ class Enemy(Game_Object):
         Game_Object.__init__(self)
 
         if physics_object == None:
-            self.physics_object = Physics_Object(mass = 100, pos = Vector2(self.game_state.widthscreen/(randint(0,6)),self.game_state.heightscreen/(randint(0,6)), ang = -math.pi/2, moi = 100000)
+            self.physics_object = Physics_Object(mass = 100, pos = Vector2(self.game_state.widthscreen/(rd.randint(1,6)),self.game_state.heightscreen/(rd.randint(1,6))), ang = -math.pi/2, moi = 100000)
             self.physics_object.parent = self
         else:
             self.physics_object = physics_object
