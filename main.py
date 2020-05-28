@@ -161,8 +161,14 @@ class Level_Manager(Game_Object):
             #set amount of asteroids
             if self.level_number <= 3:
                 asteroid_number = 20
+                if self.enemies_amount < 2:
+                    self.game_state.enemy = Enemy()
+                    self.enemies_amount =+ 1
             elif (3 < self.level_number <= 5):
                 asteroid_number = 30
+                if self.enemies_amount < 2:
+                    self.game_state.enemy = Enemy()
+                    self.enemies_amount =+ 1
             else:
                 self.asteroid_amount += 5
                 asteroid_number = self.asteroid_amount
@@ -546,25 +552,6 @@ class Player_Controller(Game_Object):
         if not self.right and player_physics.vel.x > 0: #go right
             force_to_add = Vector2(1,0)*min(abs(self.thrust_force*self.correction_boost*player_physics.vel.x), self.thrust_force*self.correction_boost)*-1 
             player_physics.add_force(force_to_add)
-        """
-        currently not necessary because all thrust directions have the same thrust, re-add if different thrust directions have different thrust levels:
-        if self.reference_frame == "local":
-            player_forward = Vector2().vector_from_angle(player_physics.ang)
-            if not self.forward: #go forward
-                force_to_add = player_forward*self.thrust_force*self.correction_boost*-1
-                player_physics.add_force(force_to_add)
-            if not self.back: #go backward
-                force_to_add = player_forward*-self.thrust_force*self.correction_boost*-1
-                player_physics.add_force(force_to_add)
-            if not self.left: #go left
-                player_left = Vector2().vector_from_angle(player_physics.ang-0.5*math.pi)
-                force_to_add = player_left*self.thrust_force*self.correction_boost*-1 
-                player_physics.add_force(force_to_add)
-            if not self.right: #go right
-                player_right = Vector2().vector_from_angle(player_physics.ang+0.5*math.pi)
-                force_to_add = player_right*self.thrust_force*self.correction_boost*-1
-                player_physics.add_force(force_to_add)
-        """
 
     def fly_by_wire_rotation(self):
 
@@ -711,7 +698,7 @@ class Enemy(Game_Object):
         Game_Object.__init__(self)
 
         if physics_object == None:
-            self.physics_object = Physics_Object(mass = 100, pos = Vector2(self.game_state.widthscreen/(randint(0,6)),self.game_state.heightscreen/(randint(0,6)), ang = -math.pi/2, moi = 100000)
+            self.physics_object = Physics_Object(mass = 100, pos = Vector2(0,self.game_state.heightscreen/(rd.randint(1,6))), moi = 100000)
             self.physics_object.parent = self
         else:
             self.physics_object = physics_object
@@ -725,7 +712,7 @@ class Enemy(Game_Object):
             self.rigid_body.parent = self
         
         if health_manager == None:
-            self.health_manager = Health_Manager(hp=500)
+            self.health_manager = Health_Manager(hp=3)
             self.health_manager.parent = self
         else:
             self.health_manager = health_manager
@@ -782,11 +769,13 @@ class Enemy(Game_Object):
         speed_vector = self.physics_object.vel
         speed_mag = Vector2.mag(speed_vector)
         if speed_mag > 1:
-            speed_vector -= 0.2*speed_vector
+            speed_vector -= 0.03*speed_vector
         if 0.2 <= speed_mag <= 1:
-            speed_vector += Vector2(rd.uniform(-0.2,0.2), rd.uniform(-0.2,0.2))
+            speed_vector += Vector2(rd.uniform(-0.03,0.03), rd.uniform(-0.03,0.03))
         if speed_mag < 0.2:
-            speed_vector += 0.2*speed_vector
+            speed_vector += 0.03*speed_vector
+        if speed_mag == 0:
+            speed_vector+=Vector2(0.2,0)
         self.physics_object.vel = speed_vector
 
     def on_collision(self, other):
@@ -795,7 +784,7 @@ class Enemy(Game_Object):
                 play_sound("./sounds/bangLarge.wav")
         if isinstance(other, SpaceShip):
             if hasattr(other, "health_manager"):
-                other.health_manager.zero_hp()
+                other.health_manager.take_damage(500)
                 play_sound("./sounds/bangLarge.wav")
     
     def shoot_at_player(self):
