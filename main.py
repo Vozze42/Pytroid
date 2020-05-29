@@ -6,7 +6,7 @@
 
 import pygame as pg
 import physics_engine as pe
-from physics_engine import Physics_Manager, Physics_Object, Rigid_Body, Vector2, Render_Image, Render_Circle, play_sound, Image_Manager
+from physics_engine import Physics_Manager, Physics_Object, Rigid_Body, Vector2, Render_Image, Render_Circle, play_sound, Image_Manager, draw_text, Draw_Blit_Pipeline
 import random as rd
 import math
 import os
@@ -35,6 +35,7 @@ class Game_State():
 
     def main_menu(self):
         self.image_manager = Image_Manager(image_folder= "./images", asteroid_path = "./images/asteroids")
+        self.draw_blit_pipeline = Draw_Blit_Pipeline()
         start_image = self.image_manager.images["Pytroid.png"]
         start_image = pg.transform.scale(start_image, (self.widthscreen, self.heightscreen))
         pg.mixer.music.load("./sounds/battletheme.mp3")
@@ -45,7 +46,9 @@ class Game_State():
                 if event.type == pg.KEYDOWN:
                     self.start_game()
 
-            self.screen.blit(start_image, [0, 0])
+            to_blit = ["blit", start_image, [0, 0]]
+            self.draw_blit_pipeline.background_layer.append(to_blit)
+            self.draw_blit_pipeline.draw_everything()
             pg.display.flip()
 
     def start_game(self):    
@@ -54,6 +57,7 @@ class Game_State():
         self.level_manager = Level_Manager()
         self.asteroid_manager = Asteroid_Manager() #TODO: Move to level_manager
         self.enemy_manager = Enemy_Manager() #TODO: Move to level_manager
+        self.health_bar = Bar((self.widthscreen/3,20), (self.widthscreen/2, self.heightscreen*0.95), True, 100)
         
         self.player = SpaceShip()
 
@@ -150,22 +154,10 @@ class Game_State():
 
             self.physics_manager.update_all(self.dt)
 
+            self.draw_blit_pipeline.draw_everything()
+
             pg.display.flip()
-
-class Text_Manager():
-    def draw_text(self,text, size, color, position, middle):
-        text = str(text)
-
-        default_font = pg.font.get_default_font()
-        self.font = pg.font.Font(default_font, size)
-
-        textsurface = self.font.render(text, False, color)
-        if middle:
-            offset = textsurface.get_size()
-            position = (position[0] - offset[0] / 2, position[1] - offset[1] / 2)
-
-        self.game_state.screen.blit(textsurface, position)
-
+    
 class Game_Object():
     game_state = None
 
@@ -180,7 +172,7 @@ class Game_Object():
             self.game_state.remove_game_object(self)
 
 class Level_Manager(Game_Object):
-    def __init__(self, frequency = 200, level_number = 0, level_time = 15000, level_prop = 1, asteroids = 20):
+    def __init__(self, frequency = 200, level_number = 6, level_time = 15000, level_prop = 1, asteroids = 20):
         Game_Object.__init__(self)
 
         self.level_number = level_number
@@ -330,7 +322,7 @@ class Asteroid_Manager(Game_Object):
         physics_object = Physics_Object(mass = mass, pos = pos, vel = vel), 
         rigid_body =  Rigid_Body(radius=radius), 
         render_image = Render_Image(image, size = size), 
-        health_manager =  Health_Manager(hp=mass**2/3000)
+        health_manager =  Health_Manager(max_hp=mass**2/3000)
         )
         
         return current_asteroid
@@ -349,10 +341,11 @@ class Asteroid_Manager(Game_Object):
             self.astroid_time += self.game_state.dt
 
 class Health_Manager(Game_Object):
-    def __init__(self, hp = 3, parent = None):
+    def __init__(self, max_hp = 3, parent = None):
         Game_Object.__init__(self)
 
-        self.hp = hp
+        self.max_hp = max_hp
+        self.hp = max_hp
         self.parent = parent
 
     def take_damage(self, damage):
@@ -455,11 +448,31 @@ class Weapon_Manager(Game_Object):
 
     def select_target(self):
         distance_list = []
+        minimum_values = []
         for asteroid in self.game_state.asteroids_manager.asteroid:
             distance = Vector2.mag(self.game_state.player.physics_object.pos - asteroid.physics_object.pos)
             distance_list.append(distance)
+        minimum_list = distance_list
+        asteroid_indices = []
+        for i in range(0,5):  
+            minimum_values.append(min(minimum_list))
+            minimum_list.remove(min(minimum_list))
+
+        for minima in minimum_list:
+            index = 0
+            for distances in distance_list:
+                index += 1
+                if distances == minima:
+                    asteroid_indices.append(index)
         
-        return
+        selected_enemies = []
+        for indices in asteroid_indices:
+            selected_enemies.append(self.game_state.asteroids_manager.asteroid[indices])
+        
+        return asteroid_indices
+        
+
+
 
 class Bullet(Game_Object):
     def __init__(self, physics_object=None, rigid_body=None, bullet_damage = 1, shooter = None, render_circle = None):
@@ -668,7 +681,7 @@ class SpaceShip(Game_Object):
             self.rigid_body.parent = self
         
         if health_manager == None:
-            self.health_manager = Health_Manager(hp=100)
+            self.health_manager = Health_Manager(max_hp=100)
             self.health_manager.parent = self
         else:
             self.health_manager = health_manager
@@ -694,6 +707,12 @@ class SpaceShip(Game_Object):
         else:
             self.player_controller = render_image
             self.player_controller.parent = self
+
+        self.health_update()
+    
+    def health_update(self):
+        percentage = self.health_manager.hp / self.health_manager.max_hp
+        self.game_state.health_bar.update_bar(percentage, self.health_manager.hp)
 
     def out_of_bounds(self):
         radius = self.rigid_body.radius
@@ -743,10 +762,10 @@ class Text_Stats(Game_Object):
     def update_text(self):
         WHITE = (255,255,255)
 
-        Text_Manager.draw_text("Level: "+str(self.game_state.level_manager.level_number), 40, WHITE, (4, 0), False)
-        Text_Manager.draw_text("Health: "+str(self.game_state.player.health_manager.hp), 40, WHITE, (4, 40), False)
-        Text_Manager.draw_text("Points total: "+str(self.game_state.points_total), 40, WHITE, (4, 80), False)
-        Text_Manager.draw_text("Asteroids broken: "+str(self.game_state.asteroids_broken), 40, WHITE, (4, 120), False)
+        draw_text("Level: "+str(self.game_state.level_manager.level_number), 40, WHITE, (4, 0), False, self.game_state.screen)
+        draw_text("Health: "+str(self.game_state.player.health_manager.hp), 40, WHITE, (4, 40), False, self.game_state.screen)
+        draw_text("Points total: "+str(self.game_state.points_total), 40, WHITE, (4, 80), False, self.game_state.screen)
+        draw_text("Asteroids broken: "+str(self.game_state.asteroids_broken), 40, WHITE, (4, 120), False, self.game_state.screen)
 
     def local_update(self):
         self.update_text()
@@ -770,7 +789,7 @@ class Enemy(Game_Object):
             self.rigid_body.parent = self
         
         if health_manager == None:
-            self.health_manager = Health_Manager(hp=3)
+            self.health_manager = Health_Manager(max_hp=3)
             self.health_manager.parent = self
         else:
             self.health_manager = health_manager
@@ -853,7 +872,7 @@ class Enemy(Game_Object):
         self.control_speed()
 
 class Missile():
-    def __init__(self, physics_object=None, rigid_body=None, bullet_damage = 1, shooter = None, render_image = None):
+    def __init__(self, physics_object=None, rigid_body=None, bullet_damage = 1, shooter = None, render_image = None, weapon_manager = None):
         Game_Object.__init__(self)
         
         if self.physics_object == None:
@@ -876,17 +895,61 @@ class Missile():
         else:
             self.render_image = render_image
             self.render_image.parent = self
-        
 
-    def steer_to_target(self):
-        return
-        
+        if self.weapon_manager == None:
+            self.weapon_manager = Weapon_Manager()
+            self.weapon_manager.parent = self
+        else:
+            self.weapon_manager = weapon_manager
+            self.weapon_manager.parent = self
+
+
+    def control_missile(self, target):
+        self.missile = Missile()
+        previous_distance = Vector2.mag(enemies.physics_object.pos-self.missile.physics_object.pos)
+        previous_target_velocity = self.target.physics_object.vel
+        previous_closing_speed = Vector2(0,0)
+        while abs(Vector2.mag(enemies.physics_object.pos-self.missile.physics_object.pos)) > 0:    
+            target_pos = enemies.physics_object.pos
+            target_velocity = enemies.physics_object.vel
+            target_acceleration = enemies.physics_object.accel
+
+            missile_position = self.missile.physics_object.pos
+            missile_velocity = self.missile.physics_object.vel
+
+            distance = Vector2.mag(target_pos-missile_position)
+
+            closing_speed = -1*(distance-previous_distance)/self.game_state.dt
+            closing_accel = (closing_speed - previous_closing_speed)/self.game_state.dt
+
+            time_impact = (-closing_speed+math.sqrt(closing_speed**2-2*closing_accel*distance))/closing_accel
+
+            predicted_target_pos = target_veloc*time_impact+0.5*target_acceleration*time_impact**2
+            predicted_target_direction = target_pos + predicted_target_pos - missile_position
+            predicted_target_direction_unitvector = predicted_target_direction/Vector2.mag(predicted_target_direction)
+
+            missile_deviation_velocity = missile_velocity - (closing_speed * predicted_target_direction_unitvector)
+
+            predicted_missile_deviation = missile_deviation_velocity * time_impact
+
+            aim_point = target_pos + predictedTargetPosition - predictedMissileDeviation;
+            aimPointDirection = aimPoint - missilePosition;
+
+            deviation = Vector3.Angle(transform.forward, aimPointDirection);
+float TimeToImpactCalc(float closingSpeed, float closingAcceleration, float distance)
+    {
+        float determinant = Mathf.Pow(closingSpeed, 2) + 2 * closingAcceleration * distance;
 
     def local_update(self):
+        controle_missile(self.game_state.asteroids_manager.asteroid[self.weapon_manager.select_target()[0]])
+        controle_missile(self.game_state.asteroids_manager.asteroid[self.weapon_manager.select_target()[1]])
+        controle_missile(self.game_state.asteroids_manager.asteroid[self.weapon_manager.select_target()[2]])
+        controle_missile(self.game_state.asteroids_manager.asteroid[self.weapon_manager.select_target()[3]])
+        controle_missile(self.game_state.asteroids_manager.asteroid[self.weapon_manager.select_target()[4]])
         return
 
 class Bar(Game_Object):
-    def init(self, size, position, percentage = 1,  background_color = (150,0,0), bar_color = (255,0,0)):
+    def __init__(self, size, position, position_middle  = False, number= None, percentage = 1,  background_color = (150,0,0), bar_color = (255,0,0)):
         Game_Object.__init__(self)
 
         self.size = size
@@ -894,9 +957,16 @@ class Bar(Game_Object):
         self.background_color = background_color
         self.bar_color = bar_color
 
-        self.bar = pg.Rect(int(position[0]), int(position[1]),  int(size[1]),  int(size[1]))
-        self.background = pg.Rect(int(position[0]), int(position[1]),  int(size[1]),  int(size[1]))
-        return
+        if position_middle == True:
+            self.position = (int(self.position[0] - self.size[0]/2), int(self.position[1] - self.size[1]/2))
+
+        self.bar = pg.Rect(int(self.position[0]), int(self.position[1]),  int(self.size[0]),  int(self.size[1]))
+        self.background = pg.Rect(int(self.position[0]), int(self.position[1]),  int(self.size[0]),  int(self.size[1]))
+
+        if number != None:
+            self.number = number
+        else:
+            self.number = None
 
     def update_bar(self, percentage, number = None, position = None, background_color = None, bar_color = None):
         if position != None:
@@ -906,8 +976,11 @@ class Bar(Game_Object):
         if bar_color != None:
             self.bar_color = bar_color
         
-        new_size = size[0]/percentage
-        self.size = (new_size, self.size[1])
+        bar_size = self.size[0]*percentage
+        self.bar =  pg.Rect(int(self.position[0]), int(self.position[1]),  int(bar_size),  int(self.size[1]))
+
+        if number != None:
+            self.number = number
             
         return
     
@@ -915,8 +988,11 @@ class Bar(Game_Object):
         self.draw_bar()
 
     def draw_bar(self):
-        pg.draw.rect(self.game_state.screen, self.bar_color, self.bar)
         pg.draw.rect(self.game_state.screen, self.background_color, self.background)
+        pg.draw.rect(self.game_state.screen, self.bar_color, self.bar)
+        if self.number != None:
+            draw_position = (int(self.position[0] + self.size[0]/2), int(self.position[1] + self.size[1]/2 + 2))
+            draw_text(str(self.number), int(self.size[1]), (255,255,255), draw_position, True, self.game_state.screen)
         
 
 

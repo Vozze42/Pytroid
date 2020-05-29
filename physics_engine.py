@@ -331,6 +331,29 @@ class Image_Manager():
         self.images = self.get_and_convert_images(self.image_folder)
         self.asteroids = self.get_and_convert_images(self.asteroid_path)
 
+class Draw_Blit_Pipeline(self):
+    def __init__(self):
+        self.ui_layer = []
+        self.game_layer = []
+        self.background_layer = []
+
+    def draw_everything(self):
+        for item in self.background_layer:
+            self.draw(item)
+        for item in self.game_layer:
+            self.draw(item)
+        for item in self.ui_layer:
+            self.draw(item)
+        return
+
+    def draw(self, to_draw):
+        if to_draw[0] == "circle":
+            pygame.draw.circle(to_draw[1], to_draw[2], to_draw[3], to_draw[4])
+        if to_draw[0] == "rect":
+            pygame.draw.rect(to_draw[1], to_draw[2],  to_draw[3])
+        if to_draw[0] == "blit":
+            screen.blit(to_draw[1], to_draw[2])
+
 
 def play_sound(filepath):
     sound = pygame.mixer.Sound(filepath)
@@ -345,6 +368,20 @@ def play_sound(filepath):
     if filepath == "./sounds/thrust.wav":
         pygame.mixer.Channel(4).play(pygame.mixer.Sound(filepath))
         sound.set_volume(0.16)
+
+def draw_text(text, size, color, position, middle, screen):
+        text = str(text)
+
+        default_font = pygame.font.get_default_font()
+        font = pygame.font.Font(default_font, size)
+
+        textsurface = font.render(text, False, color)
+        if middle:
+            offset = textsurface.get_size()
+            position = (position[0] - offset[0] / 2, position[1] - offset[1] / 2)
+
+        screen.blit(textsurface, position)
+
 
 def myround(x, base):
         return base * round(x/base)
