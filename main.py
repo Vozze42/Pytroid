@@ -910,10 +910,10 @@ class Missile():
             t1 = (-1*closing_speed + math.sqrt(determinant))/closing_acceleration)
             t2 = (-1*closing_speed + math.sqrt(determinant))/closing_acceleration)
             if (t1 > 0) and (t2 > 0):
-                timeMin = min(t1, t2);
+                timeMin = min(t1, t2)
                 return timeMin
             else:
-                return max(t1, t2);
+                return max(t1, t2)
         else
             return 0
 
