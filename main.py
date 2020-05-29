@@ -54,7 +54,9 @@ class Game_State():
         self.level_manager = Level_Manager()
         self.asteroid_manager = Asteroid_Manager() #TODO: Move to level_manager
         self.enemy_manager = Enemy_Manager() #TODO: Move to level_manager
+
         self.health_bar = Bar((self.widthscreen/3,20), (self.widthscreen/2, self.heightscreen*0.95), True, 100)
+        self.missile_bar = Bar((self.widthscreen/8,10), (self.widthscreen/5, self.heightscreen*0.95), True, background_color= (100,100, 255), bar_color=(0,0,255))
         
         self.player = SpaceShip()
 
@@ -261,7 +263,6 @@ class Enemy_Manager(Game_Object):
         else:
             self.enemy_time += self.game_state.dt
 
-
 class Asteroid_Manager(Game_Object):
     def __init__(self):
         Game_Object.__init__(self)
@@ -414,7 +415,7 @@ class Asteroid(Game_Object):
         self.remove_self([self.game_state.asteroid_manager.asteroids])
 
 class Weapon_Manager(Game_Object):
-    def __init__(self, gun_cooldown = 100, bullet_damage = 1.5, bullet_speed = 0.75, bullet_radius = 2, missile_cooldown = 10000, missile_shot = 5, missile_launch_speed = 0.5, max_missile_speed = 0.7, missile_ripple_speed = 100):
+    def __init__(self, gun_cooldown = 100, bullet_damage = 1.5, bullet_speed = 0.75, bullet_radius = 2, missile_cooldown = 10000, missile_shot = 50, missile_launch_speed = 0.5, max_missile_speed = 0.7, missile_ripple_speed = 100):
         Game_Object.__init__(self)
         self.parent = None
 
@@ -456,35 +457,15 @@ class Weapon_Manager(Game_Object):
             
     def shoot_missiles(self):
         current_time = pg.time.get_ticks()
+        self.targets = self.get_distanced_targets(self.max_missile_speed)
 
         if current_time - self.last_missile_ripple_time > self.missile_cooldown:
             self.last_missile_time = 0
             self.missile_ripple = True
             self.index = 0
-            self.targets = self.get_distanced_targets(self.max_missile_speed)
+            
             self.last_missile_time = self.missile_ripple_speed
             self.last_missile_ripple_time = pg.time.get_ticks()
-
-    def local_update(self):
-        if self.missile_ripple:
-            if self.index <= self.missile_shot and self.index < len(self.targets) and self.last_missile_time >= self.missile_ripple_speed:
-                shooter = self.parent
-                shooter_radius = shooter.rigid_body.radius
-
-                player_forward =  self.parent.point_gun()
-                missile = Missile(self.targets[self.index][1], self.parent, max_speed = self.max_missile_speed)
-                self.missiles.append(missile)
-
-                missile.physics_object.pos = shooter.physics_object.pos + player_forward * (shooter_radius + 5) 
-                missile.physics_object.vel = player_forward * self.missile_launch_speed + shooter.physics_object.vel
-                self.last_missile_time = 0                
-                self.index += 1
-            else:
-                if self.index > self.missile_shot or self.index >= len(self.targets):
-                    self.missile_ripple = False
-                    self.index = 0
-                if self.missile_ripple_speed > self.last_missile_time:
-                    self.last_missile_time += self.game_state.dt
 
     def get_distanced_targets(self, missile_speed):
         distance_list = []
@@ -505,31 +486,41 @@ class Weapon_Manager(Game_Object):
             predicted_target_pos = target_pos + target_vel*time_to_impact
             
             distance = Vector2.mag(shooter_pos - predicted_target_pos)
+            pg.draw.circle(self.game_state.screen, (0,0,0), (int(predicted_target_pos.x), int(predicted_target_pos.y)), 10)
+            draw_text(distance, 20, (255,255,255), (int(predicted_target_pos.x), int(predicted_target_pos.y)), True, self.game_state.screen)
             distance_list.append([distance, target])
         distance_list.sort(key=lambda x: x[0])
-        '''
-        minimum_list = distance_list
-        asteroid_indices = []
-        for i in range(0,5):  
-            minimum_values.append(min(minimum_list))
-            minimum_list.remove(min(minimum_list))
-
-        for minima in minimum_list:
-            index = 0
-            for distances in distance_list:
-                index += 1
-                if distances == minima:
-                    asteroid_indices.append(index)
-        
-        selected_enemies = []
-        for indices in asteroid_indices:
-            selected_enemies.append(self.game_state.asteroid_manager.asteroids[indices])
-        '''
+        print(distance_list)
         return distance_list
+
+    def missile_update(self):
+        if self.missile_ripple:
+            if self.index <= self.missile_shot and self.index < len(self.targets) and self.last_missile_time >= self.missile_ripple_speed:
+                shooter = self.parent
+                shooter_radius = shooter.rigid_body.radius
+
+                player_forward =  self.parent.point_gun()
+                missile = Missile(self.targets[self.index][1], self.parent, max_speed = self.max_missile_speed)
+                self.missiles.append(missile)
+
+                missile.physics_object.pos = shooter.physics_object.pos + player_forward * (shooter_radius + 5) 
+                missile.physics_object.vel = player_forward * self.missile_launch_speed + shooter.physics_object.vel
+                self.last_missile_time = 0                
+                self.index += 1
+            else:
+                if self.index > self.missile_shot or self.index >= len(self.targets):
+                    self.missile_ripple = False
+                    self.index = 0
+                if self.missile_ripple_speed > self.last_missile_time:
+                    self.last_missile_time += self.game_state.dt
+
+    def charge_bar_update(self):
+        return
+
+    def local_update(self):
+        self.missile_update()
         
-
-
-
+        
 class Bullet(Game_Object):
     def __init__(self, physics_object=None, rigid_body=None, bullet_damage = 1, shooter = None, render_circle = None):
         Game_Object.__init__(self)
@@ -1026,6 +1017,7 @@ class Missile(Game_Object):
     def local_update(self):
         self.control_missile(self.target)
         self.out_of_bounds()
+        self.check_enemy_alive()
 
     def check_enemy_alive(self):
         if self.target.removed:
