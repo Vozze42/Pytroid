@@ -6,7 +6,7 @@
 
 import pygame as pg
 import physics_engine as pe
-from physics_engine import Physics_Manager, Physics_Object, Rigid_Body, Vector2, Render_Image, Render_Circle, play_sound, Image_Manager, draw_text, Draw_Blit_Pipeline
+from physics_engine import Physics_Manager, Physics_Object, Rigid_Body, Vector2, Render_Image, Render_Circle, play_sound, Image_Manager, draw_text
 import random as rd
 import math
 import os
@@ -35,7 +35,6 @@ class Game_State():
 
     def main_menu(self):
         self.image_manager = Image_Manager(image_folder= "./images", asteroid_path = "./images/asteroids")
-        self.draw_blit_pipeline = Draw_Blit_Pipeline()
         start_image = self.image_manager.images["Pytroid.png"]
         start_image = pg.transform.scale(start_image, (self.widthscreen, self.heightscreen))
         pg.mixer.music.load("./sounds/battletheme.mp3")
@@ -46,9 +45,7 @@ class Game_State():
                 if event.type == pg.KEYDOWN:
                     self.start_game()
 
-            to_blit = ["blit", start_image, [0, 0]]
-            self.draw_blit_pipeline.background_layer.append(to_blit)
-            self.draw_blit_pipeline.draw_everything()
+            self.screen.blit(start_image, [0, 0])
             pg.display.flip()
 
     def start_game(self):    
@@ -121,7 +118,7 @@ class Game_State():
         game_over_image = self.image_manager.images["game over.png"]
         game_over_image = pg.transform.scale(game_over_image, (self.widthscreen, self.heightscreen))
         while True:
-            self.screen.blit(game_over_image, (0, 0))
+            self.screen.blit(game_over_image, [0, 0])
             pg.display.flip()
             for event in pg.event.get():
                 if event.type == pg.KEYDOWN and event.key == pg.K_n:
@@ -154,8 +151,6 @@ class Game_State():
 
             self.physics_manager.update_all(self.dt)
 
-            self.draw_blit_pipeline.draw_everything()
-
             pg.display.flip()
     
 class Game_Object():
@@ -166,13 +161,17 @@ class Game_Object():
             self.game_state.game_objects.append(self)
             self.removed = False
 
-    def remove_self(self):
+    def remove_self(self, lists_references = None):
         if not self.removed:
             self.removed = True
             self.game_state.remove_game_object(self)
 
+            if lists_references != None:
+                for lists_reference in lists_references:
+                    lists_reference.remove(self)
+
 class Level_Manager(Game_Object):
-    def __init__(self, frequency = 200, level_number = 6, level_time = 15000, level_prop = 1, asteroids = 20):
+    def __init__(self, frequency = 200, level_number = 0, level_time = 15000, level_prop = 1, asteroids = 20):
         Game_Object.__init__(self)
 
         self.level_number = level_number
@@ -221,7 +220,7 @@ class Level_Manager(Game_Object):
                 
             #asteroid_frequency
             if asteroid_number != 0:
-                self.frequency = int(self.level_time)/int(asteroid_number)
+                self.frequency = int(self.level_time)/int(asteroid_number)*0.7
 
             self.current_level = Level(asteroid_side = asteroid_side, random = random, asteroid_number = asteroid_number, frequency=self.frequency, enemy_number=enemy_number)
 
@@ -278,7 +277,7 @@ class Asteroid_Manager(Game_Object):
             angle = 0   
 
         rand = rd.randint(0,100)/100
-        mass = 40 + (400-40)*rand**3 #rd.randint(40, 250) #avg mass of 80 kg assumed
+        mass = 70 + (400-70)*rand**3 #rd.randint(40, 250) #avg mass of 80 kg assumed
         radius = int(mass/4) #with average mass 80, radius average asteroid 20 pixels
         vel_int = rd.randint(15,30)/mass #standard total momentum of 400 , avg 50 velocity in pixel/second,
 
@@ -287,7 +286,7 @@ class Asteroid_Manager(Game_Object):
 
         lin_size = int(radius * 2 *1.4)
         size = (lin_size, lin_size)
-        margin = 50
+        margin = 0
         if number_ast%waveprop == 0:
             pos = Vector2(widthscreen + lin_size/2 - margin, rd.randint(0,heightscreen)) #right screen border
             coord = Vector2.unpack(pos)
@@ -400,7 +399,7 @@ class Asteroid(Game_Object):
 
     def out_of_bounds(self):
         coord = Vector2.unpack(self.physics_object.pos)
-        radius = self.rigid_body.radius
+        radius = self.rigid_body.radius + 200
         if  coord[0] < 0 - radius or coord[0] > self.game_state.widthscreen + radius or coord[1] < 0 - radius or coord[1] > self.game_state.heightscreen + radius:
             self.zero_hp()
     
@@ -412,11 +411,10 @@ class Asteroid(Game_Object):
                 play_sound("./sounds/bangLarge.wav")
 
     def zero_hp(self):
-        self.remove_self()
-        self.game_state.asteroid_manager.asteroids.remove(self)
+        self.remove_self([self.game_state.asteroid_manager.asteroids])
 
 class Weapon_Manager(Game_Object):
-    def __init__(self, gun_cooldown = 100, bullet_damage = 1.5, bullet_speed = 0.75, bullet_radius = 2):
+    def __init__(self, gun_cooldown = 100, bullet_damage = 1.5, bullet_speed = 0.75, bullet_radius = 2, missile_cooldown = 10000, missile_shot = 5, missile_launch_speed = 0.5, max_missile_speed = 0.7, missile_ripple_speed = 100):
         Game_Object.__init__(self)
         self.parent = None
 
@@ -425,6 +423,16 @@ class Weapon_Manager(Game_Object):
         self.bullet_speed = bullet_speed
         self.last_gunfire_time = 0
         self.bullet_radius = bullet_radius
+
+        self.missiles = []
+        self.missile_cooldown = missile_cooldown
+        self.missile_shot = missile_shot
+        self.last_missile_ripple_time = 0
+        self.missile_launch_speed = missile_launch_speed
+        self.max_missile_speed = max_missile_speed
+
+        self.missile_ripple_speed = missile_ripple_speed
+        self.missile_ripple = False
 
     def shoot_gun(self):
         current_time = pg.time.get_ticks()
@@ -445,13 +453,61 @@ class Weapon_Manager(Game_Object):
             bullet.physics_object.vel = player_forward * self.bullet_speed + shooter.physics_object.vel
 
             self.last_gunfire_time = pg.time.get_ticks()
+            
+    def shoot_missiles(self):
+        current_time = pg.time.get_ticks()
 
-    def select_target(self):
+        if current_time - self.last_missile_ripple_time > self.missile_cooldown:
+            self.last_missile_time = 0
+            self.missile_ripple = True
+            self.index = 0
+            self.targets = self.get_distanced_targets(self.max_missile_speed)
+            self.last_missile_time = self.missile_ripple_speed
+            self.last_missile_ripple_time = pg.time.get_ticks()
+
+    def local_update(self):
+        if self.missile_ripple:
+            if self.index <= self.missile_shot and self.index < len(self.targets) and self.last_missile_time >= self.missile_ripple_speed:
+                shooter = self.parent
+                shooter_radius = shooter.rigid_body.radius
+
+                player_forward =  self.parent.point_gun()
+                missile = Missile(self.targets[self.index][1], self.parent, max_speed = self.max_missile_speed)
+                self.missiles.append(missile)
+
+                missile.physics_object.pos = shooter.physics_object.pos + player_forward * (shooter_radius + 5) 
+                missile.physics_object.vel = player_forward * self.missile_launch_speed + shooter.physics_object.vel
+                self.last_missile_time = 0                
+                self.index += 1
+            else:
+                if self.index > self.missile_shot or self.index >= len(self.targets):
+                    self.missile_ripple = False
+                    self.index = 0
+                if self.missile_ripple_speed > self.last_missile_time:
+                    self.last_missile_time += self.game_state.dt
+
+    def get_distanced_targets(self, missile_speed):
         distance_list = []
         minimum_values = []
-        for asteroid in self.game_state.asteroids_manager.asteroid:
-            distance = Vector2.mag(self.game_state.player.physics_object.pos - asteroid.physics_object.pos)
-            distance_list.append(distance)
+        shooter_pos = self.parent.physics_object.pos
+        targets = []
+        
+        for asteroid in self.game_state.asteroid_manager.asteroids:
+            targets.append(asteroid)
+        for enemie in self.game_state.enemy_manager.enemies:
+            targets.append(enemie)
+        
+        for target in targets:
+            target_pos = target.physics_object.pos
+            distance_to_target = shooter_pos - target_pos
+            time_to_impact = distance_to_target.mag() / missile_speed
+            target_vel = target.physics_object.vel
+            predicted_target_pos = target_pos + target_vel*time_to_impact
+            
+            distance = Vector2.mag(shooter_pos - predicted_target_pos)
+            distance_list.append([distance, target])
+        distance_list.sort(key=lambda x: x[0])
+        '''
         minimum_list = distance_list
         asteroid_indices = []
         for i in range(0,5):  
@@ -467,9 +523,9 @@ class Weapon_Manager(Game_Object):
         
         selected_enemies = []
         for indices in asteroid_indices:
-            selected_enemies.append(self.game_state.asteroids_manager.asteroid[indices])
-        
-        return asteroid_indices
+            selected_enemies.append(self.game_state.asteroid_manager.asteroids[indices])
+        '''
+        return distance_list
         
 
 
@@ -550,6 +606,8 @@ class Player_Controller(Game_Object):
         if keys[pg.K_SPACE]:
             player.weapon_manager.shoot_gun()
             play_sound("./sounds/fire.wav")
+        if keys[pg.K_1]:
+            player.weapon_manager.shoot_missiles()
         #control the spacecraft: 
         if keys[pg.K_LEFT]: 
             self.rot_left = True
@@ -659,7 +717,6 @@ class Player_Controller(Game_Object):
             self.fly_by_wire_rotation()
         if self.control_mode == "assist":
             self.fly_by_wire_rotation()
-
 
 class SpaceShip(Game_Object):
     def __init__(self, physics_object = None, rigid_body = None, weapon_manager = None, health_manager = None, render_image = None, player_controller = None):
@@ -860,7 +917,7 @@ class Enemy(Game_Object):
             play_sound("./sounds/bangLarge.wav")
         if isinstance(other, SpaceShip):
             if hasattr(other, "health_manager"):
-                other.health_manager.take_damage(500)
+                other.health_manager.take_damage(50)
                 play_sound("./sounds/bangLarge.wav")
     
     def shoot_at_player(self):
@@ -871,103 +928,108 @@ class Enemy(Game_Object):
         self.out_of_bounds()
         self.control_speed()
 
-class Missile():
-    def __init__(self, physics_object=None, rigid_body=None, bullet_damage = 1, shooter = None, render_image = None, weapon_manager = None):
+class Missile(Game_Object):
+    def __init__(self, target, shooter, max_speed = 0.6, physics_object=None, rigid_body=None, bullet_damage = 1, render_image = None, weapon_manager = None):
         Game_Object.__init__(self)
-        
-        if self.physics_object == None:
+
+        if physics_object == None:
             self.physics_object = Physics_Object()
             self.physics_object.parent = self
         else:
             self.physics_object = physics_object
             self.physics_object.parent = self
         
-        if self.rigid_body == None:
-            self.rigid_body = Rigid_Body()
+        if rigid_body == None:
+            self.rigid_body = Rigid_Body(radius = 4)
             self.rigid_body.parent = self
         else:
             self.rigid_body = rigid_body
             self.rigid_body.parent = self
 
-        if self.render_image == None:
-            self.render_image = Render_Image()
+        if render_image == None:
+            self.render_image = Render_Image(self.game_state.image_manager.images["missile.png"], scalar_size = 0.15, ang = math.pi/2)
             self.render_image.parent = self
         else:
             self.render_image = render_image
             self.render_image.parent = self
 
-        if self.weapon_manager == None:
+        if weapon_manager == None:
             self.weapon_manager = Weapon_Manager()
             self.weapon_manager.parent = self
         else:
             self.weapon_manager = weapon_manager
             self.weapon_manager.parent = self
 
-    def determinant(self, closing_speed, closing_acceleration, distance):
-        determinant = closing_speed**2+2*abs(closing_acceleration)*distance
+        self.target = target
+        self.shooter = shooter
 
-        if determinant >= 0:
-            t1 = (-1*closing_speed + math.sqrt(determinant))/closing_acceleration)
-            t2 = (-1*closing_speed + math.sqrt(determinant))/closing_acceleration)
-            if (t1 > 0) and (t2 > 0):
-                timeMin = min(t1, t2)
-                return timeMin
-            else:
-                return max(t1, t2)
-        else
-            return 0
+        self.previous_distance = 0 #Vector2.mag(target_pos-missile_position)
+        self.previous_closing_speed = 0#-1*(distance-self.previous_distance)/self.game_state.dt
+        self.max_speed = max_speed
 
     def control_missile(self, target):
-        self.missile = Missile()
-        target_pos = enemies.physics_object.pos
-        missile_position = self.missile.physics_object.pos
+        target_pos = target.physics_object.pos
+        missile_position = self.physics_object.pos
         distance = Vector2.mag(target_pos-missile_position)
-        previous_distance = Vector2.mag(enemies.physics_object.pos-self.missile.physics_object.pos)
-        previous_closing_distance = -1*(distance-previous_distance)/self.game_state.dt
-        
-        while Vector2.mag(enemies.physics_object.pos-self.missile.physics_object.pos) > 0:    
-            target_pos = enemies.physics_object.pos
-            target_velocity = enemies.physics_object.vel
-            target_acceleration = enemies.physics_object.accel
+         
+        target_velocity = target.physics_object.vel
+        target_acceleration = target.physics_object.accel
 
-            missile_position = self.missile.physics_object.pos
-            missile_velocity = self.missile.physics_object.vel
+        missile_position = self.physics_object.pos
+        missile_velocity = self.physics_object.vel
 
-            if Vector2.mag(missile_velocity) >= 0.75:
-                missile_velocity -= 0.1*missile_velocity
+        if Vector2.mag(self.physics_object.vel) >= self.max_speed:
+            self.physics_object.vel -= 0.1*self.physics_object.vel
 
-            distance = Vector2.mag(target_pos-missile_position)
+        distance = Vector2.mag(target_pos-missile_position)
 
-            closing_speed = -1*(distance-previous_distance)/self.game_state.dt
-            closing_accel = (closing_speed - previous_closing_speed)/self.game_state.dt
+        closing_speed = -1*(distance-self.previous_distance)/self.game_state.dt
 
-            time_impact = determinant(closing_speed, closing_accel, distance)
+        time_impact = distance / self.max_speed
 
-            predicted_target_pos = target_velocity*time_impact+0.5*target_acceleration*time_impact**2
-            predicted_target_direction = target_pos + predicted_target_pos - missile_position
-            predicted_target_direction_unitvector = predicted_target_direction/Vector2.mag(predicted_target_direction)
+        predicted_target_pos = target_velocity*time_impact+0.5*target_acceleration*time_impact**2
+        predicted_target_direction = target_pos + predicted_target_pos - missile_position
+        predicted_target_direction_unitvector = predicted_target_direction/Vector2.mag(predicted_target_direction)
 
-            missile_deviation_velocity = missile_velocity - (closing_speed * predicted_target_direction_unitvector)
+        missile_deviation_velocity = missile_velocity - (closing_speed * predicted_target_direction_unitvector)
 
-            predicted_missile_deviation = missile_deviation_velocity * time_impact
+        predicted_missile_deviation = missile_deviation_velocity * time_impact
 
-            aim_point = target_pos + predicted_target_pos - predicted_missile_deviation
-            aim_point_direction = aim_point - missile_position
+        aim_point = target_pos + predicted_target_pos - predicted_missile_deviation
+        aim_point_direction = aim_point - missile_position
 
-            velocity_add_unit_vector = (aim_point_direction-missile_velocity)/Vector2.mag(aim_point_direction-missile_velocity)
-            control = 0.1
-            missile_velocity += control*velocity_add_unit_vector
+        velocity_add_unit_vector = (aim_point_direction-missile_velocity)/Vector2.mag(aim_point_direction-missile_velocity)
+        control = 0.05
+        self.physics_object.vel += control*velocity_add_unit_vector
+        self.physics_object.ang = -0.5*math.pi + self.physics_object.vel.get_angle()
 
-            previous_distance = distance
-            previous_closing_speed = closing_speed
+        self.previous_distance = distance
+        self.previous_closing_speed = closing_speed
+
+    def on_collision(self, other):
+        if isinstance(other, Asteroid):
+            other.health_manager.take_damage(500) 
+            self.zero_hp()
+        if isinstance(other, Enemy):
+            other.health_manager.take_damage(500) 
+            self.zero_hp()
+            
+    def out_of_bounds(self):
+        coord = Vector2.unpack(self.physics_object.pos)
+        radius = self.rigid_body.radius
+        if  coord[0] < 0 - radius or coord[0] > self.game_state.widthscreen + radius or coord[1] < 0 - radius or coord[1] > self.game_state.heightscreen + radius:
+            self.zero_hp()
+
+    def zero_hp(self):
+        self.remove_self([self.shooter.weapon_manager.missiles])
 
     def local_update(self):
-        controle_missile(self.game_state.asteroids_manager.asteroid[self.weapon_manager.select_target()[0]])
-        controle_missile(self.game_state.asteroids_manager.asteroid[self.weapon_manager.select_target()[1]])
-        controle_missile(self.game_state.asteroids_manager.asteroid[self.weapon_manager.select_target()[2]])
-        controle_missile(self.game_state.asteroids_manager.asteroid[self.weapon_manager.select_target()[3]])
-        controle_missile(self.game_state.asteroids_manager.asteroid[self.weapon_manager.select_target()[4]])
-        return
+        self.control_missile(self.target)
+        self.out_of_bounds()
+
+    def check_enemy_alive(self):
+        if self.target.removed:
+            self.zero_hp()
 
 class Bar(Game_Object):
     def __init__(self, size, position, position_middle  = False, number= None, percentage = 1,  background_color = (150,0,0), bar_color = (255,0,0)):
@@ -1015,6 +1077,4 @@ class Bar(Game_Object):
             draw_position = (int(self.position[0] + self.size[0]/2), int(self.position[1] + self.size[1]/2 + 2))
             draw_text(str(self.number), int(self.size[1]), (255,255,255), draw_position, True, self.game_state.screen)
         
-
-
 game_state = Game_State()

@@ -70,7 +70,7 @@ class Vector2:
         return Vector2(x,y)
 
     def get_angle(self):
-        angle = math.atan(self.y/self.x)
+        angle = math.atan2(self.y,self.x)
         return angle
         
     def unpack(self):
@@ -82,7 +82,6 @@ class Vector2:
         return Vector2(x,y)
         
 class Physics_Object:
-
     def __init__(self, mass = 1, pos = Vector2(0,0), vel = Vector2(0,0), accel = Vector2(0,0), moi = 1, ang = 0, ang_vel = 0, ang_accel = 0, parent = None):
         self.mass = mass
         self.moi = moi
@@ -330,30 +329,6 @@ class Image_Manager():
     def prepare_images(self):
         self.images = self.get_and_convert_images(self.image_folder)
         self.asteroids = self.get_and_convert_images(self.asteroid_path)
-
-class Draw_Blit_Pipeline(self):
-    def __init__(self):
-        self.ui_layer = []
-        self.game_layer = []
-        self.background_layer = []
-
-    def draw_everything(self):
-        for item in self.background_layer:
-            self.draw(item)
-        for item in self.game_layer:
-            self.draw(item)
-        for item in self.ui_layer:
-            self.draw(item)
-        return
-
-    def draw(self, to_draw):
-        if to_draw[0] == "circle":
-            pygame.draw.circle(to_draw[1], to_draw[2], to_draw[3], to_draw[4])
-        if to_draw[0] == "rect":
-            pygame.draw.rect(to_draw[1], to_draw[2],  to_draw[3])
-        if to_draw[0] == "blit":
-            screen.blit(to_draw[1], to_draw[2])
-
 
 def play_sound(filepath):
     sound = pygame.mixer.Sound(filepath)
