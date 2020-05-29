@@ -903,13 +903,29 @@ class Missile():
             self.weapon_manager = weapon_manager
             self.weapon_manager.parent = self
 
+    def determinant(self, closing_speed, closing_acceleration, distance):
+        determinant = closing_speed**2+2*abs(closing_acceleration)*distance
+
+        if determinant >= 0:
+            t1 = (-1*closing_speed + math.sqrt(determinant))/closing_acceleration)
+            t2 = (-1*closing_speed + math.sqrt(determinant))/closing_acceleration)
+            if (t1 > 0) and (t2 > 0):
+                timeMin = min(t1, t2);
+                return timeMin
+            else:
+                return max(t1, t2);
+        else
+            return 0
 
     def control_missile(self, target):
         self.missile = Missile()
+        target_pos = enemies.physics_object.pos
+        missile_position = self.missile.physics_object.pos
+        distance = Vector2.mag(target_pos-missile_position)
         previous_distance = Vector2.mag(enemies.physics_object.pos-self.missile.physics_object.pos)
-        previous_target_velocity = self.target.physics_object.vel
-        previous_closing_speed = Vector2(0,0)
-        while abs(Vector2.mag(enemies.physics_object.pos-self.missile.physics_object.pos)) > 0:    
+        previous_closing_distance = -1*(distance-previous_distance)/self.game_state.dt
+        
+        while Vector2.mag(enemies.physics_object.pos-self.missile.physics_object.pos) > 0:    
             target_pos = enemies.physics_object.pos
             target_velocity = enemies.physics_object.vel
             target_acceleration = enemies.physics_object.accel
@@ -917,14 +933,17 @@ class Missile():
             missile_position = self.missile.physics_object.pos
             missile_velocity = self.missile.physics_object.vel
 
+            if Vector2.mag(missile_velocity) >= 0.75:
+                missile_velocity -= 0.1*missile_velocity
+
             distance = Vector2.mag(target_pos-missile_position)
 
             closing_speed = -1*(distance-previous_distance)/self.game_state.dt
             closing_accel = (closing_speed - previous_closing_speed)/self.game_state.dt
 
-            time_impact = (-closing_speed+math.sqrt(closing_speed**2-2*closing_accel*distance))/closing_accel
+            time_impact = determinant(closing_speed, closing_accel, distance)
 
-            predicted_target_pos = target_veloc*time_impact+0.5*target_acceleration*time_impact**2
+            predicted_target_pos = target_velocity*time_impact+0.5*target_acceleration*time_impact**2
             predicted_target_direction = target_pos + predicted_target_pos - missile_position
             predicted_target_direction_unitvector = predicted_target_direction/Vector2.mag(predicted_target_direction)
 
@@ -932,13 +951,15 @@ class Missile():
 
             predicted_missile_deviation = missile_deviation_velocity * time_impact
 
-            aim_point = target_pos + predictedTargetPosition - predictedMissileDeviation;
-            aimPointDirection = aimPoint - missilePosition;
+            aim_point = target_pos + predicted_target_pos - predicted_missile_deviation
+            aim_point_direction = aim_point - missile_position
 
-            deviation = Vector3.Angle(transform.forward, aimPointDirection);
-float TimeToImpactCalc(float closingSpeed, float closingAcceleration, float distance)
-    {
-        float determinant = Mathf.Pow(closingSpeed, 2) + 2 * closingAcceleration * distance;
+            velocity_add_unit_vector = (aim_point_direction-missile_velocity)/Vector2.mag(aim_point_direction-missile_velocity)
+            control = 0.1
+            missile_velocity += control*velocity_add_unit_vector
+
+            previous_distance = distance
+            previous_closing_speed = closing_speed
 
     def local_update(self):
         controle_missile(self.game_state.asteroids_manager.asteroid[self.weapon_manager.select_target()[0]])
