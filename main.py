@@ -27,9 +27,6 @@ class Game_State():
         self.asteroid_index = 1
         self.running = True
 
-        self.widthscreen = 1920
-        self.heightscreen = 1080
-
         self.init_pygame()
         self.main_menu()
 
@@ -71,8 +68,10 @@ class Game_State():
 
     def init_pygame(self):
         pg.init()
-        self.screen = pg.display.set_mode((0,0), pg.FULLSCREEN)
-        
+        size = pg.display.list_modes()[0]
+        self.screen = pg.display.set_mode(size, pg.RESIZABLE)
+        self.widthscreen, self.heightscreen = pg.display.get_surface().get_size()
+
     def remove_children(self, game_object):
         members = inspect.getmembers(game_object)
         for member in members:
@@ -457,15 +456,13 @@ class Weapon_Manager(Game_Object):
             
     def shoot_missiles(self):
         current_time = pg.time.get_ticks()
-        self.targets = self.get_distanced_targets(self.max_missile_speed)
 
         if current_time - self.last_missile_ripple_time > self.missile_cooldown:
-            self.last_missile_time = 0
+            self.targets = self.get_distanced_targets(self.max_missile_speed)
+            self.last_missile_time = self.missile_ripple_speed
+            self.last_missile_ripple_time = current_time
             self.missile_ripple = True
             self.index = 0
-            
-            self.last_missile_time = self.missile_ripple_speed
-            self.last_missile_ripple_time = pg.time.get_ticks()
 
     def get_distanced_targets(self, missile_speed):
         distance_list = []
@@ -515,10 +512,15 @@ class Weapon_Manager(Game_Object):
                     self.last_missile_time += self.game_state.dt
 
     def charge_bar_update(self):
-        return
+        current_time = pg.time.get_ticks()
+        delta = current_time - self.last_missile_ripple_time
+        percentage = min((delta) / self.missile_cooldown, 1)
+        self.game_state.missile_bar.update_bar(percentage)
 
     def local_update(self):
+        self.charge_bar_update()
         self.missile_update()
+        
         
         
 class Bullet(Game_Object):
