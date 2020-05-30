@@ -70,7 +70,7 @@ class Vector2:
         return Vector2(x,y)
 
     def get_angle(self):
-        angle = math.atan(self.y/self.x)
+        angle = math.atan2(self.y,self.x)
         return angle
         
     def unpack(self):
@@ -82,7 +82,6 @@ class Vector2:
         return Vector2(x,y)
         
 class Physics_Object:
-
     def __init__(self, mass = 1, pos = Vector2(0,0), vel = Vector2(0,0), accel = Vector2(0,0), moi = 1, ang = 0, ang_vel = 0, ang_accel = 0, parent = None):
         self.mass = mass
         self.moi = moi
@@ -331,7 +330,6 @@ class Image_Manager():
         self.images = self.get_and_convert_images(self.image_folder)
         self.asteroids = self.get_and_convert_images(self.asteroid_path)
 
-
 def play_sound(filepath):
     sound = pygame.mixer.Sound(filepath)
     if filepath == "./sounds/fire.wav":
@@ -345,6 +343,20 @@ def play_sound(filepath):
     if filepath == "./sounds/thrust.wav":
         pygame.mixer.Channel(4).play(pygame.mixer.Sound(filepath))
         sound.set_volume(0.16)
+
+def draw_text(text, size, color, position, middle, screen):
+        text = str(text)
+
+        default_font = pygame.font.get_default_font()
+        font = pygame.font.Font(default_font, size)
+
+        textsurface = font.render(text, False, color)
+        if middle:
+            offset = textsurface.get_size()
+            position = (position[0] - offset[0] / 2, position[1] - offset[1] / 2)
+
+        screen.blit(textsurface, position)
+
 
 def myround(x, base):
         return base * round(x/base)
