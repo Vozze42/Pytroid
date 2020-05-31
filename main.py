@@ -19,8 +19,6 @@ class Game_State():
         
         Game_Object.game_state = self
 
-        self.asteroids_broken = 0
-
         self.game_objects = []
         self.fps = 60
 
@@ -133,7 +131,6 @@ class Game_State():
                     self.remove_game_object(self.player)
                     self.player = SpaceShip()
                     self.points_total = 0
-                    self.asteroids_broken = 0
                     self.level_manager.level_number = 0
                     self.level_manager.time = 0
                     return
@@ -277,7 +274,7 @@ class Asteroid_Manager(Game_Object):
             angle = 0   
 
         rand = rd.randint(0,100)/100
-        mass = 70 + (400-70)*rand**3 #rd.randint(40, 250) #avg mass of 80 kg assumed
+        mass = 70 + (330)*rand**3
         radius = int(mass/4) #with average mass 80, radius average asteroid 20 pixels
         vel_int = rd.randint(15,30)/mass #standard total momentum of 400 , avg 50 velocity in pixel/second,
 
@@ -414,7 +411,7 @@ class Asteroid(Game_Object):
         self.remove_self([self.game_state.asteroid_manager.asteroids])
 
 class Weapon_Manager(Game_Object):
-    def __init__(self, gun_cooldown = 100, bullet_damage = 1.5, bullet_speed = 0.75, bullet_radius = 2, missile_cooldown = 10000, missile_shot = 50, missile_launch_speed = 0.5, max_missile_speed = 0.7, missile_ripple_speed = 100):
+    def __init__(self, gun_cooldown = 100, bullet_damage = 1.5, bullet_speed = 0.75, bullet_radius = 2, missile_cooldown = 10000, missile_shot = 5, missile_launch_speed = 0.5, max_missile_speed = 0.7, missile_ripple_speed = 100):
         Game_Object.__init__(self)
         self.parent = None
 
@@ -430,6 +427,7 @@ class Weapon_Manager(Game_Object):
         self.last_missile_ripple_time = 0
         self.missile_launch_speed = missile_launch_speed
         self.max_missile_speed = max_missile_speed
+        self.current_time = pg.time.get_ticks()
 
         self.missile_ripple_speed = missile_ripple_speed
         self.missile_ripple = False
@@ -455,14 +453,13 @@ class Weapon_Manager(Game_Object):
             self.last_gunfire_time = pg.time.get_ticks()
             
     def shoot_missiles(self):
-        current_time = pg.time.get_ticks()
-
-        if current_time - self.last_missile_ripple_time > self.missile_cooldown:
+        self.current_time = pg.time.get_ticks()
+        if self.current_time - self.last_missile_ripple_time > self.missile_cooldown:
             self.targets = self.get_distanced_targets(self.max_missile_speed)
             self.last_missile_time = self.missile_ripple_speed
-            self.last_missile_ripple_time = current_time
+            self.last_missile_ripple_time = self.current_time
             self.missile_ripple = True
-            self.index = 0
+            self.index = 0     
 
     def get_distanced_targets(self, missile_speed):
         distance_list = []
@@ -484,8 +481,9 @@ class Weapon_Manager(Game_Object):
             
             distance = Vector2.mag(shooter_pos - predicted_target_pos)
             pg.draw.circle(self.game_state.screen, (0,0,0), (int(predicted_target_pos.x), int(predicted_target_pos.y)), 10)
-            draw_text(distance, 20, (255,255,255), (int(predicted_target_pos.x), int(predicted_target_pos.y)), True, self.game_state.screen)
+            #draw_text(distance, 20, (255,255,255), (int(predicted_target_pos.x), int(predicted_target_pos.y)), True, self.game_state.screen)
             distance_list.append([distance, target])
+        
         distance_list.sort(key=lambda x: x[0])
         print(distance_list)
         return distance_list
@@ -496,7 +494,7 @@ class Weapon_Manager(Game_Object):
                 shooter = self.parent
                 shooter_radius = shooter.rigid_body.radius
 
-                player_forward =  self.parent.point_gun()
+                player_forward =  Vector2(math.cos(self.game_state.player.physics_object.ang),math.sin(self.game_state.player.physics_object.ang))
                 missile = Missile(self.targets[self.index][1], self.parent, max_speed = self.max_missile_speed)
                 self.missiles.append(missile)
 
@@ -508,19 +506,21 @@ class Weapon_Manager(Game_Object):
                 if self.index > self.missile_shot or self.index >= len(self.targets):
                     self.missile_ripple = False
                     self.index = 0
+
                 if self.missile_ripple_speed > self.last_missile_time:
                     self.last_missile_time += self.game_state.dt
+                    
 
     def charge_bar_update(self):
-        current_time = pg.time.get_ticks()
-        delta = current_time - self.last_missile_ripple_time
-        percentage = min((delta) / self.missile_cooldown, 1)
-        self.game_state.missile_bar.update_bar(percentage)
+        self.current_time = pg.time.get_ticks()
+        self.delta = self.current_time-self.last_missile_ripple_time 
+        self.percentage = min((self.delta) / self.missile_cooldown, 1)
+        self.game_state.missile_bar.update_bar(self.percentage)
 
     def local_update(self):
         self.charge_bar_update()
         self.missile_update()
-        
+   
         
         
 class Bullet(Game_Object):
@@ -563,8 +563,17 @@ class Bullet(Game_Object):
     def on_collision(self, other):
         if hasattr(other, "health_manager"):
             other.health_manager.take_damage(self.bullet_damage) 
-            self.game_state.asteroids_broken += 1
-            self.game_state.points_total += 1
+            if isinstance(other, Enemy):
+                self.game_state.points_total += 50
+            if isinstance(other, Asteroid):
+                if 70 <= other.physics_object.mass <= 150:
+                    self.game_state.points_total += 100
+                if 150 < other.physics_object.mass <= 250:
+                    self.game_state.points_total += 75
+                if 250 < other.physics_object.mass <= 350:
+                    self.game_state.points_total += 50
+                if 350 < other.physics_object.mass <= 400:
+                    self.game_state.points_total += 25
             #play_sound("./sounds/bangSmall.wav")
         self.zero_hp()
 
@@ -812,10 +821,8 @@ class Text_Stats(Game_Object):
     def update_text(self):
         WHITE = (255,255,255)
 
-        draw_text("Level: "+str(self.game_state.level_manager.level_number), 40, WHITE, (4, 0), False, self.game_state.screen)
-        draw_text("Health: "+str(self.game_state.player.health_manager.hp), 40, WHITE, (4, 40), False, self.game_state.screen)
-        draw_text("Points total: "+str(self.game_state.points_total), 40, WHITE, (4, 80), False, self.game_state.screen)
-        draw_text("Asteroids broken: "+str(self.game_state.asteroids_broken), 40, WHITE, (4, 120), False, self.game_state.screen)
+        draw_text("Level "+str(self.game_state.level_manager.level_number), 50, WHITE, (4, 0), False, self.game_state.screen)
+        draw_text("Points: "+str(self.game_state.points_total), 50, WHITE, (4, 80), False, self.game_state.screen)
 
     def local_update(self):
         self.update_text()
@@ -1002,10 +1009,12 @@ class Missile(Game_Object):
     def on_collision(self, other):
         if isinstance(other, Asteroid):
             other.health_manager.take_damage(500) 
+            self.game_state.points_total += 25
             self.zero_hp()
         if isinstance(other, Enemy):
             other.health_manager.take_damage(500) 
             self.zero_hp()
+            self.game_state.points_total += 50
             
     def out_of_bounds(self):
         coord = Vector2.unpack(self.physics_object.pos)
