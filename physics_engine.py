@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri May 22 16:13:39 2020
-
 @author: Servaas & Lennart
 """
 
@@ -12,6 +10,7 @@ import random
 import os
 
 class Vector2:
+    """Self-written class for vector manipulation"""
     def __init__(self, x = 0, y = 0):
         self.x = x
         self.y = y
@@ -82,6 +81,7 @@ class Vector2:
         return Vector2(x,y)
         
 class Physics_Object:
+    #class for managing all physics
     def __init__(self, mass = 1, pos = Vector2(0,0), vel = Vector2(0,0), accel = Vector2(0,0), moi = 1, ang = 0, ang_vel = 0, ang_accel = 0, parent = None):
         self.mass = mass
         self.moi = moi
@@ -109,6 +109,7 @@ class Physics_Object:
         self.vel = velocity_direction * new_velocity
 
     def physics_update(self, dt):
+        #updates physics based on forces
         for force in self.forces:
             self.accel += force / self.mass
         self.vel += self.accel * dt
@@ -124,13 +125,14 @@ class Physics_Object:
         self.moments = []
         self.accel = Vector2(0,0)
         self.ang_accel = 0
-
+        #makes sure angles stay between 0 and 2*pi
         while self.ang >= 2*math.pi:
             self.ang -= 2*math.pi
         while self.ang < 0:
             self.ang += 2*math.pi
 
 class Rigid_Body():
+    #class mainly for collision detection and response
     def __init__(self, radius = 1, parent = None, e = 1):
         self.radius = radius
         self.parent = parent
@@ -140,6 +142,7 @@ class Rigid_Body():
         Physics_Manager.rigid_bodies.append(self)
 
     def collision_detection(self, other):
+        #detects whether or not a collision takes place, 
         other_pos = other.parent.physics_object.pos
         other_radius = other.radius
         own_pos = self.parent.physics_object.pos
@@ -154,6 +157,7 @@ class Rigid_Body():
             return False
 
     def collision_response(self,other):
+        #regulates what happens when objects collide (energy transfer, relative speeds etc.)
         if hasattr(self.parent, "on_collision"):
             self.parent.on_collision(other.parent)
         if hasattr(other.parent, "on_collision"):
@@ -206,6 +210,7 @@ class Physics_Manager():
         self.screen = screen
 
     def draw_bodies(self):
+        #renders all images and circles
         for render_image in self.render_images:
             render_image.render_img(self.screen)
 
@@ -230,6 +235,7 @@ class Physics_Manager():
         return
 
     def update_physics(self, dt):
+        #updates physics of all physics objects
         total_momentum = 0
         for physics_object in self.physics_objects:
             if physics_object.parent != None: #Bandage solution
@@ -237,17 +243,14 @@ class Physics_Manager():
         return
 
     def update_all(self, dt):
+        #includes all update functions, called in Game_State to update all physics
         self.update_physics(dt)
         self.update_collisions()
         self.draw_bodies()
         return
-    '''
-    def cast_ray(self, start_pos, dir):
-        for Rigid_Body in self.rigid_bodies:
-            if 
-    ''' 
 
 class Render_Circle():
+    """Function for rendering circles, was frequently used at beginning stages of development"""
     def __init__(self, radius = 0, color = (255,255,255), parent = None):
         self.radius = radius
         self.color = color
@@ -262,7 +265,9 @@ class Render_Circle():
             coord = [int(coord[0]), int(coord[1])]
             pygame.draw.circle(screen, self.color, coord, int(self.radius))
 
+
 class Render_Image():
+    """Makes it easy to initialize, scale, rotate and render images in main.py"""
     def __init__(self, image, size = None, scalar_size= None, ang = None, parent = None):
         self.image = image
         if size != None:
@@ -273,9 +278,6 @@ class Render_Image():
             self.image = self.scalar_scale_image(scalar_size)
         self.size = size
         self.image_for_angle = []
-        
-        #for angle in range(0,400,10):
-        #    self.image_for_angle.append(pygame.transform.rotozoom(self.image_rotate, angle-90, 0.1))
         
         Physics_Manager.render_images.append(self)
 
@@ -309,6 +311,7 @@ class Render_Image():
 
                 screen.blit(rotated_image, new_rect)
 
+#manages, converts, prepares images for use in main.py
 class Image_Manager():
     def __init__(self, image_folder = "", asteroid_path = ""):
         self.image_folder = image_folder
@@ -330,6 +333,32 @@ class Image_Manager():
         self.images = self.get_and_convert_images(self.image_folder)
         self.asteroids = self.get_and_convert_images(self.asteroid_path)
 
+class Ray():
+    def cast_ray(self, start_pos, direction, widthscreen, heightscreen, step = 5):
+        norm_direction = direction / direction.mag()
+        collisions = []
+        beyond_edge = False
+        i = 0
+        while not beyond_edge:
+            check_pos = start_pos + direction * i*step
+            if check_pos.x > 0 and check_pos.x < widthscreen and check_pos.y > 0 and check_pos.y < heightscreen:
+                for rigid_body in Physics_Manager.rigid_bodies:
+                    radius = rigid_body.radius
+                    pos = rigid_body.parent.physics_object.pos
+                    distance_vec = pos - check_pos
+                    distance = distance_vec.mag()
+                    if distance < radius:
+                        if len(collisions) > 1:
+                            if collisions[len(collisions)-1] != rigid_body:
+                                collisions.append(rigid_body)
+                        else:
+                            collisions.append(rigid_body)
+            else:
+                beyond_edge = True
+            i += 1
+        return collisions 
+
+#function sets mixer channels for all different soudns played in the game.
 def play_sound(filepath):
     sound = pygame.mixer.Sound(filepath)
     if filepath == "./sounds/fire.wav":
@@ -344,6 +373,7 @@ def play_sound(filepath):
         pygame.mixer.Channel(4).play(pygame.mixer.Sound(filepath))
         sound.set_volume(0.16)
 
+#function for drawing text on the display
 def draw_text(text, size, color, position, middle, screen):
         text = str(text)
 
@@ -357,6 +387,6 @@ def draw_text(text, size, color, position, middle, screen):
 
         screen.blit(textsurface, position)
 
-
+#function for rounding numbers to a certain base
 def myround(x, base):
         return base * round(x/base)
