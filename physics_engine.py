@@ -8,6 +8,12 @@ import math
 import pygame
 import random
 import os
+import sys
+
+def resource_path(relative_path):
+        if hasattr(sys, '_MEIPASS'):
+            return os.path.join(sys._MEIPASS, relative_path)
+        return os.path.join(os.path.abspath("."), relative_path)
 
 class Vector2:
     """Self-written class for vector manipulation"""
@@ -311,28 +317,6 @@ class Render_Image():
 
                 screen.blit(rotated_image, new_rect)
 
-#manages, converts, prepares images for use in main.py
-class Image_Manager():
-    def __init__(self, image_folder = "", asteroid_path = ""):
-        self.image_folder = image_folder
-        self.asteroid_path = asteroid_path
-        self.prepare_images()
-
-    def get_and_convert_images(self, path):
-        images = {}
-        files = os.listdir(path)
-        for file in files:
-            joint_path = os.path.join(path, file)
-            if os.path.isfile(os.path.join(path, file)):
-                image = pygame.image.load(joint_path).convert_alpha()
-                images[file] = image
-
-        return images
-
-    def prepare_images(self):
-        self.images = self.get_and_convert_images(self.image_folder)
-        self.asteroids = self.get_and_convert_images(self.asteroid_path)
-
 class Ray():
     def cast_ray(self, start_pos, direction, widthscreen, heightscreen, step = 5):
         norm_direction = direction / direction.mag()
@@ -358,35 +342,72 @@ class Ray():
             i += 1
         return collisions 
 
+#manages, converts, prepares images for use in main.py
+class Image_Manager():
+    def __init__(self, image_folder = "", asteroid_path = ""):
+        self.image_folder = resource_path(image_folder)
+        self.asteroid_path = resource_path(asteroid_path)
+        self.prepare_images()
+
+    def get_and_convert_images(self, path):
+        images = {}
+        files = os.listdir(path)
+        for file in files:
+            joint_path = os.path.join(path, file)
+            if os.path.isfile(os.path.join(path, file)):
+                image = pygame.image.load(joint_path).convert_alpha()
+                images[file.split(".")[0]] = image
+
+        return images
+
+    def prepare_images(self):
+        self.images = self.get_and_convert_images(self.image_folder)
+        self.asteroids = self.get_and_convert_images(self.asteroid_path)
+
 #function sets mixer channels for all different soudns played in the game.
-def play_sound(filepath):
-    sound = pygame.mixer.Sound(filepath)
-    if filepath == "./sounds/fire.wav":
-        pygame.mixer.Channel(0).play(pygame.mixer.Sound(filepath))
-    elif filepath == "./sounds/bangMedium.wav":
-        pygame.mixer.Channel(1).play(pygame.mixer.Sound(filepath))
-    elif filepath == "./sounds/bangSmall.wav":
-        pygame.mixer.Channel(2).play(pygame.mixer.Sound(filepath))
-    elif filepath == "./sounds/bangLarge.wav":
-        pygame.mixer.Channel(3).play(pygame.mixer.Sound(filepath))
-    if filepath == "./sounds/thrust.wav":
-        pygame.mixer.Channel(4).play(pygame.mixer.Sound(filepath))
-        sound.set_volume(0.16)
+class Sound_Manager():
+    def __init__(self, sound_folder = ""):
+        self.sounds = self.get_and_convert_sounds(resource_path(sound_folder))
+
+    def get_and_convert_sounds(self, path):
+        sounds = {}
+        files = os.listdir(path)
+        for file in files:
+            joint_path = os.path.join(path, file)
+            if os.path.isfile(os.path.join(path, file)):
+                sound = pygame.mixer.Sound(joint_path)
+                sounds[file.split(".")[0]] = sound
+        
+        return sounds
+
+    def play_sound(self, sound_name):
+        sound = self.sounds[sound_name]
+        if sound_name == "fire":
+            pygame.mixer.Channel(0).play(sound)
+        elif sound_name == "bangMedium":
+            pygame.mixer.Channel(1).play(sound)
+        elif sound_name == "bangSmall":
+            pygame.mixer.Channel(2).play(sound)
+        elif sound_name == "bangLarge":
+            pygame.mixer.Channel(3).play(sound)
+        elif sound_name == "thrust":
+            pygame.mixer.Channel(4).play(sound)
+            sound.set_volume(0.16)
 
 #function for drawing text on the display
 def draw_text(text, size, color, position, middle, screen):
-        text = str(text)
+    text = str(text)
 
-        default_font = pygame.font.get_default_font()
-        font = pygame.font.Font(default_font, size)
+    default_font = pygame.font.get_default_font()
+    font = pygame.font.Font(default_font, size) 
 
-        textsurface = font.render(text, False, color)
-        if middle:
-            offset = textsurface.get_size()
-            position = (position[0] - offset[0] / 2, position[1] - offset[1] / 2)
+    textsurface = font.render(text, False, color)
+    if middle:
+        offset = textsurface.get_size()
+        position = (position[0] - offset[0] / 2, position[1] - offset[1] / 2)
 
-        screen.blit(textsurface, position)
+    screen.blit(textsurface, position)
 
 #function for rounding numbers to a certain base
 def myround(x, base):
-        return base * round(x/base)
+    return base * round(x/base)

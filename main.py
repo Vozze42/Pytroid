@@ -6,17 +6,12 @@
 
 import pygame as pg
 import physics_engine as pe
-from physics_engine import Physics_Manager, Physics_Object, Rigid_Body, Vector2, Render_Image, Render_Circle, play_sound, Image_Manager, draw_text, Ray
+from physics_engine import Physics_Manager, Physics_Object, Rigid_Body, Vector2, Render_Image, Render_Circle, Image_Manager, draw_text, Ray, Sound_Manager, resource_path
 import random as rd
 import math
 import os
 import inspect
 import sys
-
-def resource_path(relative_path):
-        if hasattr(sys, '_MEIPASS'):
-            return os.path.join(sys._MEIPASS, relative_path)
-        return os.path.join(os.path.abspath("."), relative_path)
 
 class Game_State():
     """Manages and updates game, root source of all calls"""
@@ -36,10 +31,11 @@ class Game_State():
 
     def main_menu(self):
         """Spawns main menu, starts music etc."""
-        self.image_manager = Image_Manager(image_folder= "./images", asteroid_path = "./images/asteroids")
-        start_image = self.image_manager.images["Pytroid.png"]
+        self.image_manager = Image_Manager(image_folder= "images", asteroid_path = "images/asteroids")
+        self.sound_manager = Sound_Manager(sound_folder= "sounds")
+        pg.mixer.music.load(resource_path("music/battletheme.mp3"))
+        start_image = self.image_manager.images["Pytroid"]
         start_image = pg.transform.scale(start_image, (self.widthscreen, self.heightscreen))
-        pg.mixer.music.load("./sounds/battletheme.mp3")
         pg.mixer.music.play(loops = -1)
         while True:
             for event in pg.event.get():
@@ -58,7 +54,7 @@ class Game_State():
         self.asteroid_manager = Asteroid_Manager() #TODO: Move to level_manager
         self.enemy_manager = Enemy_Manager() #TODO: Move to level_manager
         
-        high_score_doc = open("high_score.txt", 'r+')
+        high_score_doc = open(resource_path("high_score.txt"), 'r+')
         self.high_score = int(float(high_score_doc.read()))
         high_score_doc.close()
         
@@ -72,7 +68,7 @@ class Game_State():
         
         self.stats = Text_Stats()
 
-        self.background_image = self.image_manager.images["Andromeda.png"]
+        self.background_image = self.image_manager.images["Andromeda"]
         self.the_image = pg.transform.scale(self.background_image, (self.widthscreen,self.heightscreen))
 
         self.update()
@@ -134,7 +130,7 @@ class Game_State():
         game_over_image = pg.transform.scale(game_over_image, (self.widthscreen, self.heightscreen))
         
         if self.points_total >= self.high_score:
-            with open("high_score.txt", 'w') as filetowrite:
+            with open(resource_path("high_score.txt"), 'w') as filetowrite:
                 filetowrite.write(str(self.points_total))
             self.high_score = self.points_total
         while True:
@@ -439,7 +435,7 @@ class Asteroid(Game_Object):
             if hasattr(other, "health_manager"):
                 damage = ((self.physics_object.vel - other.physics_object.vel).mag() ** 0.5) * self.physics_object.mass / 5
                 other.health_manager.take_damage(damage) 
-                play_sound("./sounds/bangLarge.wav")
+                self.game_state.sound_manager.play_sound("bangLarge")
         if isinstance(other, Bullet):
             self.game_state.points_total += 1
 
@@ -489,6 +485,7 @@ class Weapon_Manager(Game_Object):
 
             bullet.physics_object.pos = shooter.physics_object.pos + player_forward * (shooter_radius + self.bullet_radius + 5) 
             bullet.physics_object.vel = player_forward * self.bullet_speed + shooter.physics_object.vel
+            self.game_state.sound_manager.play_sound("fire")
 
             self.last_gunfire_time = pg.time.get_ticks()
             
@@ -519,7 +516,7 @@ class Weapon_Manager(Game_Object):
                 if isinstance(hit_parent, Asteroid) or isinstance(hit_parent, Enemy):
                     self.game_state.points_total += 50
                     hit_parent.zero_hp()
-                    play_sound("./sounds/bangLarge.wav") 
+                    self.game_state.sound_manager.play_sound("bangLarge") 
             self.last_railgun_fire_time = current_time
 
     def get_distanced_targets(self, missile_speed):
@@ -673,7 +670,6 @@ class Player_Controller(Game_Object):
         #next three give commands to shoot weapons
         if keys[pg.K_SPACE]:
             player.weapon_manager.shoot_gun()
-            play_sound("./sounds/fire.wav")
         if keys[pg.K_1]:
             player.weapon_manager.shoot_missiles()
         if keys[pg.K_2]:
@@ -827,7 +823,7 @@ class SpaceShip(Game_Object):
             self.weapon_manager.parent = self
 
         if render_image == None:
-            self.render_image = Render_Image(self.game_state.image_manager.images["Spaceship.png"], scalar_size = 0.1, ang = math.pi/2)
+            self.render_image = Render_Image(self.game_state.image_manager.images["Spaceship"], scalar_size = 0.1, ang = math.pi/2)
             self.render_image.parent = self
         else:
             self.render_image = render_image
@@ -878,7 +874,7 @@ class SpaceShip(Game_Object):
         if isinstance(other, Asteroid):
             if hasattr(other, "health_manager"):
                 other.zero_hp()
-                play_sound("./sounds/bangLarge.wav")
+                self.game_state.sound_manager.play_sound("bangLarge")
 
     def point_gun(self):
         #points spaceship bullet gun
@@ -901,7 +897,7 @@ class Text_Stats(Game_Object):
 
         draw_text("Level "+str(self.game_state.level_manager.level_number), 50, WHITE, (4, 0), False, self.game_state.screen)
         draw_text("Points "+str(self.game_state.points_total), 50, WHITE, (4, 50), False, self.game_state.screen)
-        draw_text("High Score "+str(self.game_state.high_score), 50, WHITE, (4, 100), False, self.game_state.screen)
+        #draw_text("High Score "+str(self.game_state.high_score), 50, WHITE, (4, 100), False, self.game_state.screen)
 
     def local_update(self):
         self.update_text()
@@ -997,12 +993,10 @@ class Enemy(Game_Object):
 
     def on_collision(self, other):
         #tells whats happens in case of collision
-        if isinstance(other, Asteroid):
-            play_sound("./sounds/bangLarge.wav")
         if isinstance(other, SpaceShip):
             if hasattr(other, "health_manager"):
                 other.health_manager.take_damage(50)
-                play_sound("./sounds/bangLarge.wav")
+        self.game_state.sound_manager.play_sound("bangLarge")
     
     def shoot_at_player(self):
         #automaticly shoots at player at a set timestep
@@ -1034,7 +1028,7 @@ class Missile(Game_Object):
             self.rigid_body.parent = self
 
         if render_image == None:
-            self.render_image = Render_Image(self.game_state.image_manager.images["missile.png"], scalar_size = 0.15, ang = math.pi/2)
+            self.render_image = Render_Image(self.game_state.image_manager.images["missile"], scalar_size = 0.15, ang = math.pi/2)
             self.render_image.parent = self
         else:
             self.render_image = render_image
