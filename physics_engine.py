@@ -342,6 +342,7 @@ class Ray():
             i += 1
         return collisions 
 
+
 #manages, converts, prepares images for use in main.py
 class Image_Manager():
     def __init__(self, image_folder = "", asteroid_path = ""):
@@ -368,6 +369,7 @@ class Image_Manager():
 class Sound_Manager():
     def __init__(self, sound_folder = ""):
         self.sounds = self.get_and_convert_sounds(resource_path(sound_folder))
+        pygame.mixer.set_num_channels(20)
 
     def get_and_convert_sounds(self, path):
         sounds = {}
@@ -382,6 +384,8 @@ class Sound_Manager():
 
     def play_sound(self, sound_name):
         sound = self.sounds[sound_name]
+        pygame.mixer.find_channel().play(sound)
+    """
         if sound_name == "fire":
             pygame.mixer.Channel(0).play(sound)
         elif sound_name == "bangMedium":
@@ -393,7 +397,11 @@ class Sound_Manager():
         elif sound_name == "thrust":
             pygame.mixer.Channel(4).play(sound)
             sound.set_volume(0.16)
-
+        elif sound_name == "railgun":
+            pygame.mixer.Channel(5).play(sound)
+        elif sound_name == "missile2":
+            pygame.mixer.Channel(6).play(sound)
+    """
 #function for drawing text on the display
 def draw_text(text, size, color, position, middle, screen):
     text = str(text)
@@ -411,3 +419,26 @@ def draw_text(text, size, color, position, middle, screen):
 #function for rounding numbers to a certain base
 def myround(x, base):
     return base * round(x/base)
+
+def blit_rotate(surf, image, pos, originPos, angle): #https://stackoverflow.com/questions/4183208/how-do-i-rotate-an-image-around-its-center-using-pygame/54714144
+
+    # calcaulate the axis aligned bounding box of the rotated image
+    w, h       = image.get_size()
+    box        = [pygame.math.Vector2(p) for p in [(0, 0), (w, 0), (w, -h), (0, -h)]]
+    box_rotate = [p.rotate(angle) for p in box]
+    min_box    = (min(box_rotate, key=lambda p: p[0])[0], min(box_rotate, key=lambda p: p[1])[1])
+    max_box    = (max(box_rotate, key=lambda p: p[0])[0], max(box_rotate, key=lambda p: p[1])[1])
+
+    # calculate the translation of the pivot 
+    pivot        = pygame.math.Vector2(originPos[0], -originPos[1])
+    pivot_rotate = pivot.rotate(angle)
+    pivot_move   = pivot_rotate - pivot
+
+    # calculate the upper left origin of the rotated image
+    origin = (pos[0] - originPos[0] + min_box[0] - pivot_move[0], pos[1] - originPos[1] - max_box[1] + pivot_move[1])
+
+    # get a rotated image
+    rotated_image = pygame.transform.rotate(image, angle)
+
+    # rotate and blit the image
+    surf.blit(rotated_image, origin)

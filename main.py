@@ -6,7 +6,7 @@
 
 import pygame as pg
 import physics_engine as pe
-from physics_engine import Physics_Manager, Physics_Object, Rigid_Body, Vector2, Render_Image, Render_Circle, Image_Manager, draw_text, Ray, Sound_Manager, resource_path
+from physics_engine import Physics_Manager, Physics_Object, Rigid_Body, Vector2, Render_Image, Render_Circle, Image_Manager, draw_text, Ray, Sound_Manager, resource_path,  blit_rotate
 import random as rd
 import math
 import os
@@ -126,7 +126,7 @@ class Game_State():
 
     def game_over(self):
         """Spawns game over screen, handles end of the game and gives player the option to stop/continue"""
-        game_over_image = self.image_manager.images["game over.png"]
+        game_over_image = self.image_manager.images["game over"]
         game_over_image = pg.transform.scale(game_over_image, (self.widthscreen, self.heightscreen))
         
         if self.points_total >= self.high_score:
@@ -444,7 +444,7 @@ class Asteroid(Game_Object):
 
 class Weapon_Manager(Game_Object):
     """Manages all weapons, shooting of (missiles and bullets) and even controls the flight of missiles"""
-    def __init__(self, gun_cooldown = 100, bullet_damage = 1.5, bullet_speed = 0.75, bullet_radius = 2, missile_cooldown = 10000, missile_shot = 5, missile_launch_speed = 0.5, max_missile_speed = 0.7, missile_ripple_speed = 100, railgun_cooldown = 5000):
+    def __init__(self, gun_cooldown = 100, bullet_damage = 1.5, bullet_speed = 0.75, bullet_radius = 2, missile_cooldown = 10000, missile_shot = 5, missile_launch_speed = 0.7, max_missile_speed = 0.7, missile_ripple_speed = 100, railgun_cooldown = 5000):
         Game_Object.__init__(self)
         self.parent = None
 
@@ -509,14 +509,19 @@ class Weapon_Manager(Game_Object):
             shooter = self.parent
             shooter_pos = self.parent.physics_object.pos
             shooter_dir = Vector2().vector_from_angle(self.parent.physics_object.ang)
-            hits = Ray() .cast_ray(shooter_pos, shooter_dir, self.game_state.widthscreen, self.game_state.heightscreen) 
-            pg.draw.line(self.game_state.screen, (0,0,255), (int(shooter_pos.x), int(shooter_pos.y)), (int(shooter_pos.x + shooter_dir.x *1000), int(shooter_pos.y + shooter_dir.y *1000)), 5)
+            hits = Ray().cast_ray(shooter_pos, shooter_dir, self.game_state.widthscreen, self.game_state.heightscreen) 
+            
             for hit in hits:
                 hit_parent = hit.parent
                 if isinstance(hit_parent, Asteroid) or isinstance(hit_parent, Enemy):
                     self.game_state.points_total += 50
                     hit_parent.zero_hp()
                     self.game_state.sound_manager.play_sound("bangLarge") 
+
+            self.game_state.sound_manager.play_sound("railgun")
+            railgun = Railgun(shooter_pos,shooter_dir)
+            #pg.draw.line(self.game_state.screen, (0,0,255), (int(shooter_pos.x), int(shooter_pos.y)), (int(shooter_pos.x + shooter_dir.x *1000), int(shooter_pos.y + shooter_dir.y *1000)), 5)
+
             self.last_railgun_fire_time = current_time
 
     def get_distanced_targets(self, missile_speed):
@@ -561,6 +566,7 @@ class Weapon_Manager(Game_Object):
 
                 missile.physics_object.pos = shooter.physics_object.pos + player_forward * (shooter_radius + 5) 
                 missile.physics_object.vel = player_forward * self.missile_launch_speed + shooter.physics_object.vel
+                self.game_state.sound_manager.play_sound("missile2")
                 self.last_missile_time = 0                
                 self.index += 1
             else:
@@ -637,6 +643,34 @@ class Bullet(Game_Object):
 
     def local_update(self):
         self.out_of_bounds()
+
+class Railgun(Game_Object):
+    def __init__(self, start_pos, direction, color = (0,0,255), duration = 150, fadeout = 1):
+        Game_Object.__init__(self)
+        self.start_pos = start_pos
+        self.direction = direction
+        self.color = color
+        self.duration = duration
+        self.fadeout = fadeout
+        self.start_time = pg.time.get_ticks()
+
+        self.surface = pg.Surface((2000,4), pg.SRCALPHA)
+        self.rect = pg.Rect(0,0,2000,4)
+        pg.draw.rect(self.surface, (0,0,255), self.rect)
+        
+    def local_update(self):
+        current_time = pg.time.get_ticks()
+        existance_time = current_time - self.start_time
+        if existance_time < self.duration:
+            alpha = (self.duration - existance_time*self.fadeout)/self.duration*255
+            self.surface.set_alpha(alpha)
+            blit_rotate(self.game_state.screen, self.surface, (int(self.start_pos.x),int(self.start_pos.y)), (0,2), math.degrees(-self.direction.get_angle()))
+        else:
+            self.zero_hp()
+    
+    def zero_hp(self):
+        self.remove_self
+
 
 class Player_Controller(Game_Object):
     """Sets all controls and fly-by-wire for the player, before intiating the game,
@@ -897,7 +931,7 @@ class Text_Stats(Game_Object):
 
         draw_text("Level "+str(self.game_state.level_manager.level_number), 50, WHITE, (4, 0), False, self.game_state.screen)
         draw_text("Points "+str(self.game_state.points_total), 50, WHITE, (4, 50), False, self.game_state.screen)
-        #draw_text("High Score "+str(self.game_state.high_score), 50, WHITE, (4, 100), False, self.game_state.screen)
+        draw_text("High Score "+str(self.game_state.high_score), 50, WHITE, (4, 100), False, self.game_state.screen)
 
     def local_update(self):
         self.update_text()
@@ -929,7 +963,7 @@ class Enemy(Game_Object):
             self.health_manager.parent = self
         
         if render_image == None:
-            self.render_image=Render_Image(self.game_state.image_manager.images["enemy.png"], scalar_size = 0.1, ang = math.pi/2) 
+            self.render_image=Render_Image(self.game_state.image_manager.images["enemy"], scalar_size = 0.1, ang = math.pi/2) 
             self.render_image.parent = self
         else:
             self.render_image = render_image
@@ -995,8 +1029,7 @@ class Enemy(Game_Object):
         #tells whats happens in case of collision
         if isinstance(other, SpaceShip):
             if hasattr(other, "health_manager"):
-                other.health_manager.take_damage(50)
-        self.game_state.sound_manager.play_sound("bangLarge")
+                other.health_manager.take_damage(30)
     
     def shoot_at_player(self):
         #automaticly shoots at player at a set timestep
@@ -1083,19 +1116,24 @@ class Missile(Game_Object):
 
     def on_collision(self, other):
         #sets points if the missile hits a target (asteroid or enemy)
-        if isinstance(other, Asteroid) and isinstance(self.shooter, SpaceShip):
-            other.health_manager.take_damage(500) 
-            self.game_state.points_total += 25
-            self.zero_hp()
-        if isinstance(other, Enemy) and isinstance(self.shooter, SpaceShip):
-            other.health_manager.take_damage(500) 
-            self.zero_hp()
-            self.game_state.points_total += 50
-        if isinstance(other, SpaceShip) and isinstance(self.shooter, Enemy):
-            other.health_manager.take_damage(20) 
-            self.zero_hp()
-        if isinstance(other, Bullet) and isinstance(self.shooter, Enemy):
-            self.zero_hp()
+        if isinstance(self.shooter, SpaceShip):
+            if isinstance(other, Asteroid):
+                other.health_manager.take_damage(500) 
+                self.game_state.points_total += 25
+                self.zero_hp()
+            if isinstance(other, Enemy):
+                other.health_manager.take_damage(500) 
+                self.zero_hp()
+                self.game_state.points_total += 50
+
+        if isinstance(self.shooter, Enemy):
+            if isinstance(other, SpaceShip):
+                other.health_manager.take_damage(20) 
+                self.zero_hp()
+            if isinstance(other, Bullet):
+                if isinstance(other.shooter, SpaceShip):
+                    self.zero_hp()
+        
             
     def out_of_bounds(self):
         #makes sure the missile is removed when out of bounds
