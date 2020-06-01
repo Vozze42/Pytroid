@@ -385,23 +385,7 @@ class Sound_Manager():
     def play_sound(self, sound_name):
         sound = self.sounds[sound_name]
         pygame.mixer.find_channel().play(sound)
-    """
-        if sound_name == "fire":
-            pygame.mixer.Channel(0).play(sound)
-        elif sound_name == "bangMedium":
-            pygame.mixer.Channel(1).play(sound)
-        elif sound_name == "bangSmall":
-            pygame.mixer.Channel(2).play(sound)
-        elif sound_name == "bangLarge":
-            pygame.mixer.Channel(3).play(sound)
-        elif sound_name == "thrust":
-            pygame.mixer.Channel(4).play(sound)
-            sound.set_volume(0.16)
-        elif sound_name == "railgun":
-            pygame.mixer.Channel(5).play(sound)
-        elif sound_name == "missile2":
-            pygame.mixer.Channel(6).play(sound)
-    """
+
 #function for drawing text on the display
 def draw_text(text, size, color, position, middle, screen):
     text = str(text)

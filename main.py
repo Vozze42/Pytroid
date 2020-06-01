@@ -237,7 +237,7 @@ class Level_Manager(Game_Object):
                 
             #asteroid_frequency
             if asteroid_number != 0:
-                self.frequency = int(self.level_time)/int(asteroid_number)*0.7
+                self.frequency = int(self.level_time)/int(asteroid_number)*0.9
 
             self.current_level = Level(asteroid_side = asteroid_side, random = random, asteroid_number = asteroid_number, frequency=self.frequency, enemy_number=enemy_number)
 
@@ -444,7 +444,7 @@ class Asteroid(Game_Object):
 
 class Weapon_Manager(Game_Object):
     """Manages all weapons, shooting of (missiles and bullets) and even controls the flight of missiles"""
-    def __init__(self, gun_cooldown = 100, bullet_damage = 1.5, bullet_speed = 0.75, bullet_radius = 2, missile_cooldown = 10000, missile_shot = 5, missile_launch_speed = 0.7, max_missile_speed = 0.7, missile_ripple_speed = 100, railgun_cooldown = 5000):
+    def __init__(self, gun_cooldown = 100, bullet_damage = 1.5, bullet_speed = 0.75, bullet_radius = 2, missile_cooldown = 10000, missile_shot = 7, missile_launch_speed = 0.7, max_missile_speed = 0.7, missile_ripple_speed = 100, railgun_cooldown = 5000):
         Game_Object.__init__(self)
         self.parent = None
 
@@ -671,11 +671,10 @@ class Railgun(Game_Object):
     def zero_hp(self):
         self.remove_self
 
-
 class Player_Controller(Game_Object):
     """Sets all controls and fly-by-wire for the player, before intiating the game,
     the player can choose to get assisted (fly-by-wire) or not."""
-    def __init__(self, reference_frame = "global", control_mode = "coupled", rotation_mode = "second", thrust_force = 0.04, rotation_moment = 1, rotation_speed = 0.05, correction_boost = 2): 
+    def __init__(self, reference_frame = "global", control_mode = "coupled", rotation_mode = "second", thrust_force = 0.08, rotation_moment = 1, rotation_speed = 0.05, correction_boost = 2): 
          #control modes: coupled: speed and rotation compensated, assist: rotation compensated, 
          #decoupled: nothing compensated
          Game_Object.__init__(self)
@@ -829,7 +828,7 @@ class SpaceShip(Game_Object):
 
         if physics_object == None:
 
-            self.physics_object = Physics_Object(mass = 50, pos = Vector2(self.game_state.widthscreen/2,self.game_state.heightscreen/2), ang = -math.pi/2, moi = 100000)
+            self.physics_object = Physics_Object(mass = 100, pos = Vector2(self.game_state.widthscreen/2,self.game_state.heightscreen/2), ang = -math.pi/2, moi = 100000)
             self.physics_object.parent = self
         else:
             self.physics_object = physics_object
@@ -970,7 +969,7 @@ class Enemy(Game_Object):
             self.render_image.parent = self    
 
         if weapon_manager == None:
-            self.weapon_manager = Weapon_Manager(gun_cooldown = 500, bullet_damage = 1.5, bullet_speed = 0.75, bullet_radius = 2, missile_cooldown=7000, missile_shot=1,max_missile_speed= 0.1, missile_launch_speed=0)
+            self.weapon_manager = Weapon_Manager(gun_cooldown = 500, bullet_damage = 1.5, bullet_speed = 0.75, bullet_radius = 2, missile_cooldown=7000, missile_shot=1,max_missile_speed= 0.08, missile_launch_speed=0)
             self.weapon_manager.parent = self
         else:
             self.weapon_manager = weapon_manager
@@ -1015,11 +1014,11 @@ class Enemy(Game_Object):
         #randomly controls enemy speed, makes sure it does not exceed set maximum speed
         speed_vector = self.physics_object.vel
         speed_mag = Vector2.mag(speed_vector)
-        if speed_mag > 1:
+        if speed_mag > 0.7:
             speed_vector -= 0.03*speed_vector
-        if 0.2 <= speed_mag <= 1:
+        if 0.2 <= speed_mag <= 0.7:
             speed_vector += Vector2(rd.uniform(-0.03,0.03), rd.uniform(-0.03,0.03))
-        if speed_mag < 0.2:
+        if speed_mag < 0.1:
             speed_vector += 0.03*speed_vector
         if speed_mag == 0:
             speed_vector+=Vector2(0.2,0)
@@ -1129,6 +1128,7 @@ class Missile(Game_Object):
         if isinstance(self.shooter, Enemy):
             if isinstance(other, SpaceShip):
                 other.health_manager.take_damage(20) 
+                self.game_state.sound_manager.play_sound("bangLarge")
                 self.zero_hp()
             if isinstance(other, Bullet):
                 if isinstance(other.shooter, SpaceShip):
