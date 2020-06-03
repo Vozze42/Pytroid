@@ -276,7 +276,7 @@ class Enemy_Manager(Game_Object):
         if current_level.enemy_number > len(self.enemies) and self.enemy_time > self.enemy_frequency:
             enemy = self.enemy_generator()
             self.enemies.append(enemy)
-            self.enemy_frequency = rd.randint(3000,50000)
+            self.enemy_frequency = rd.randint(3000,15000)
             self.enemy_time = 0
         else:
             self.enemy_time += self.game_state.dt
@@ -371,8 +371,11 @@ class Health_Manager(Game_Object):
         self.hp = max_hp
         self.parent = parent
 
-    def take_damage(self, damage):
-        self.hp -= int(damage)
+    def change_hp(self, delta):
+        self.hp += int(delta)
+
+        if self.hp > self.max_hp:
+            self.hp = self.max_hp
 
         if hasattr(self.parent, "health_update"):
             self.parent.health_update()
@@ -380,7 +383,7 @@ class Health_Manager(Game_Object):
         if self.hp <= 0:
             if hasattr(self.parent, "zero_hp"):
                 self.parent.zero_hp()
-
+        
 class Asteroid(Game_Object):
     """A class for all asteroids"""
     def __init__(self, asteroid_damage = None, physics_object = None, rigid_body = None, health_manager = None, render_image = None):
@@ -434,7 +437,7 @@ class Asteroid(Game_Object):
         if isinstance(other, SpaceShip):
             if hasattr(other, "health_manager"):
                 damage = ((self.physics_object.vel - other.physics_object.vel).mag() ** 0.5) * self.physics_object.mass / 5
-                other.health_manager.take_damage(damage) 
+                other.health_manager.change_hp(-damage) 
                 self.game_state.sound_manager.play_sound("bangLarge")
         if isinstance(other, Bullet):
             self.game_state.points_total += 1
@@ -444,7 +447,7 @@ class Asteroid(Game_Object):
 
 class Weapon_Manager(Game_Object):
     """Manages all weapons, shooting of (missiles and bullets) and even controls the flight of missiles"""
-    def __init__(self, gun_cooldown = 100, bullet_damage = 1.5, bullet_speed = 0.75, bullet_radius = 2, missile_cooldown = 10000, missile_shot = 7, missile_launch_speed = 0.7, max_missile_speed = 0.7, missile_ripple_speed = 100, railgun_cooldown = 5000):
+    def __init__(self, gun_cooldown = 100, bullet_damage = 1.5, bullet_speed = 0.75, bullet_radius = 2, missile_cooldown = 10000, missile_shot = 6, missile_launch_speed = 0.7, max_missile_speed = 0.7, missile_ripple_speed = 100, railgun_cooldown = 5000):
         Game_Object.__init__(self)
         self.parent = None
 
@@ -591,8 +594,9 @@ class Weapon_Manager(Game_Object):
         self.game_state.railgun_bar.update_bar(railgun_percentage)
 
     def local_update(self):
-        self.charge_bars_update()
-        self.missile_update()
+        if self.parent == self.game_state.player:
+            self.charge_bars_update()
+            self.missile_update()
       
 class Bullet(Game_Object):
     """A class for all bullet objects, both for enemy and for player"""
@@ -636,7 +640,7 @@ class Bullet(Game_Object):
     def on_collision(self, other):
         #determines the amount of points the player get when a bullet hits the enemy or an asteroid
         if hasattr(other, "health_manager"):
-            other.health_manager.take_damage(self.bullet_damage) 
+            other.health_manager.change_hp(-self.bullet_damage) 
             if isinstance(other, Enemy):
                 self.game_state.points_total += 50
         self.zero_hp()
@@ -941,7 +945,7 @@ class Enemy(Game_Object):
         Game_Object.__init__(self)
 
         if physics_object == None:
-            self.physics_object = Physics_Object(mass = 100, pos = Vector2(0,self.game_state.heightscreen/(rd.randint(1,6))), moi = 100000)
+            self.physics_object = Physics_Object(mass = 100, pos = Vector2(0,self.game_state.heightscreen/(rd.randint(1,6))))
             self.physics_object.parent = self
         else:
             self.physics_object = physics_object
@@ -998,6 +1002,8 @@ class Enemy(Game_Object):
             self.physics_object.vel = self.physics_object.vel.pseudo_cross(inverse_y)
 
     def zero_hp(self):
+        if rd.randint(0,2) == 1:
+            health_pickup = Health_Pickup(physics_object= Physics_Object(mass=100, pos = self.physics_object.pos))
         self.remove_self()
         self.game_state.enemy_manager.enemies.remove(self)
         
@@ -1028,7 +1034,7 @@ class Enemy(Game_Object):
         #tells whats happens in case of collision
         if isinstance(other, SpaceShip):
             if hasattr(other, "health_manager"):
-                other.health_manager.take_damage(30)
+                other.health_manager.change_hp(-30)
     
     def shoot_at_player(self):
         #automaticly shoots at player at a set timestep
@@ -1117,17 +1123,17 @@ class Missile(Game_Object):
         #sets points if the missile hits a target (asteroid or enemy)
         if isinstance(self.shooter, SpaceShip):
             if isinstance(other, Asteroid):
-                other.health_manager.take_damage(500) 
+                other.health_manager.change_hp(-500) 
                 self.game_state.points_total += 25
                 self.zero_hp()
             if isinstance(other, Enemy):
-                other.health_manager.take_damage(500) 
+                other.health_manager.change_hp(-500) 
                 self.zero_hp()
                 self.game_state.points_total += 50
 
         if isinstance(self.shooter, Enemy):
             if isinstance(other, SpaceShip):
-                other.health_manager.take_damage(20) 
+                other.health_manager.change_hp(-20) 
                 self.game_state.sound_manager.play_sound("bangLarge")
                 self.zero_hp()
             if isinstance(other, Bullet):
@@ -1203,5 +1209,66 @@ class Bar(Game_Object):
         if self.number != None:
             draw_position = (int(self.position[0] + self.size[0]/2), int(self.position[1] + self.size[1]/2 + 2))
             draw_text(str(self.number), int(self.size[1]), (255,255,255), draw_position, True, self.game_state.screen)
+
+class Health_Pickup(Game_Object):
+    def __init__(self, hp = 20, physics_object = None, rigid_body = None, render_image = None):
+        Game_Object.__init__(self)
+
+        if physics_object == None:
+            self.physics_object = Physics_Object()
+            self.physics_object.parent = self
+        else:
+            self.physics_object = physics_object
+            self.physics_object.parent = self
+
+        if rigid_body == None:
+            self.rigid_body = Rigid_Body(radius = 25)
+            self.rigid_body.parent = self
+        else:
+            self.rigid_body = rigid_body
+            self.rigid_body.parent = self
         
+        if render_image == None:
+            self.render_image=Render_Image(self.game_state.image_manager.images["health_pickup"], scalar_size = 0.04)
+            self.render_image.parent = self
+        else:
+            self.render_image = render_image
+            self.render_image.parent = self   
+
+        self.hp = hp
+
+    def on_collision(self, other):
+        if isinstance(other, SpaceShip):
+            other.health_manager.change_hp(self.hp)
+            self.game_state.sound_manager.play_sound('health')
+            self.zero_hp()
+    
+    def zero_hp(self):
+        self.remove_self()
+
+    def local_update(self):
+        self.out_of_bounds()
+
+    def out_of_bounds(self):
+        #same reaction to out of bounds as spaceship
+        radius = self.rigid_body.radius
+        widthscreen = self.game_state.widthscreen
+        heightscreen = self.game_state.heightscreen
+
+        inverse_x = Vector2(-1, 1)
+        inverse_y = Vector2(1, -1)
+        coord = self.physics_object.pos.unpack()
+        if coord[0] < 0 + radius:
+            self.physics_object.pos = Vector2(0 + radius, coord[1])
+            self.physics_object.vel = self.physics_object.vel.pseudo_cross(inverse_x)
+        if coord[0] > widthscreen - radius:
+            self.physics_object.pos = Vector2(widthscreen - radius, coord[1])
+            self.physics_object.vel = self.physics_object.vel.pseudo_cross(inverse_x)
+        if coord[1] < 0 + radius:
+            self.physics_object.pos = Vector2(coord[0], 0 + radius)
+            self.physics_object.vel = self.physics_object.vel.pseudo_cross(inverse_y)
+        if coord[1] > heightscreen - radius:
+            self.physics_object.pos = Vector2(coord[0], heightscreen - radius)
+            self.physics_object.vel = self.physics_object.vel.pseudo_cross(inverse_y)
+   
 game_state = Game_State()
